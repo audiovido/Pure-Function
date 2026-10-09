@@ -1,0 +1,6 @@
+{
+  "name": "Pure Function - Fitness Coaching Platform",
+  "description": "High-performance fitness coaching platform featuring Trainer View, Client View, interactive calendar, workout logs, and video form demonstration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
