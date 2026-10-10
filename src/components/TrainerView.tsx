@@ -320,13 +320,8 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
         {/* Day Header & Action Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-transparent">
           <div>
-            <h2 className="text-base sm:text-xl font-extrabold tracking-tight flex items-center gap-2 flex-wrap">
-              <span>{activeDayWorkout.fullDayName}</span>
-              {selectedDate === todayStr && (
-                <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-md font-black uppercase tracking-wider bg-amber-400 text-black shadow-sm">
-                  Today
-                </span>
-              )}
+            <h2 className="text-base sm:text-xl font-extrabold tracking-tight">
+              {activeDayWorkout.fullDayName}
             </h2>
           </div>
 
