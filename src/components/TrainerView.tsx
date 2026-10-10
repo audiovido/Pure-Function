@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Users,
   BookOpen,
@@ -24,13 +24,8 @@ import {
   Flame,
 } from 'lucide-react';
 import { ClientProfile, DayWorkout, Exercise, ThemeMode } from '../types';
-import {
-  getTodayDateString,
-  getWeekDays,
-  formatWeekRangeHeader,
-  shiftDateByWeeks,
-  getOrCreateDayWorkout,
-} from '../utils/dateUtils';
+import { getOrCreateDayWorkout } from '../utils/dateUtils';
+import { CalendarStrip } from './CalendarStrip';
 
 interface TrainerViewProps {
   clients: ClientProfile[];
@@ -84,40 +79,14 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
   const [saveToast, setSaveToast] = useState(false);
   const [editingField, setEditingField] = useState<{
     exerciseId: string;
-    field: 'reps' | 'intensity' | 'rest' | 'notes';
+    field: 'sets' | 'reps' | 'intensity' | 'rest' | 'notes';
   } | null>(null);
   const [tempValue, setTempValue] = useState('');
 
   const selectedClient =
     clients.find((c) => c.id === selectedClientId) || clients[0];
 
-  const todayStr = getTodayDateString();
-  const [viewWeekDate, setViewWeekDate] = useState<string>(
-    selectedDate || todayStr
-  );
-
-  useEffect(() => {
-    if (selectedDate) {
-      setViewWeekDate(selectedDate);
-    }
-  }, [selectedDate]);
-
-  const weekDays = getWeekDays(viewWeekDate);
-  const weekRangeTitle = formatWeekRangeHeader(weekDays);
   const activeDayWorkout = getOrCreateDayWorkout(workouts, selectedDate);
-
-  const handlePrevWeek = () => {
-    setViewWeekDate((prev) => shiftDateByWeeks(prev, -1));
-  };
-
-  const handleNextWeek = () => {
-    setViewWeekDate((prev) => shiftDateByWeeks(prev, 1));
-  };
-
-  const handleGoToToday = () => {
-    setViewWeekDate(todayStr);
-    onSelectDate(todayStr);
-  };
 
   const handleSave = () => {
     onSaveSession();
@@ -125,16 +94,9 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
     setTimeout(() => setSaveToast(false), 2400);
   };
 
-  const handleQuickSetChange = (exercise: Exercise, delta: number) => {
-    const newSets = Math.max(1, (exercise.sets || 3) + delta);
-    if (onUpdateExerciseInline) {
-      onUpdateExerciseInline(selectedDate, exercise.id, { sets: newSets });
-    }
-  };
-
   const startEditing = (
     exercise: Exercise,
-    field: 'reps' | 'intensity' | 'rest' | 'notes'
+    field: 'sets' | 'reps' | 'intensity' | 'rest' | 'notes'
   ) => {
     setEditingField({ exerciseId: exercise.id, field });
     setTempValue(String(exercise[field] || ''));
@@ -142,9 +104,16 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
 
   const saveEditing = (exerciseId: string) => {
     if (editingField && onUpdateExerciseInline) {
-      onUpdateExerciseInline(selectedDate, exerciseId, {
-        [editingField.field]: tempValue,
-      });
+      if (editingField.field === 'sets') {
+        const num = parseInt(tempValue, 10);
+        onUpdateExerciseInline(selectedDate, exerciseId, {
+          sets: isNaN(num) || num < 1 ? 1 : num,
+        });
+      } else {
+        onUpdateExerciseInline(selectedDate, exerciseId, {
+          [editingField.field]: tempValue,
+        });
+      }
     }
     setEditingField(null);
   };
@@ -157,106 +126,16 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           : 'bg-white/95 border-neutral-200/90 text-neutral-900'
       }`}
     >
-      {/* 1. INTERACTIVE WEEKLY CALENDAR STRIP (Directly Under Header) */}
-      <section className="space-y-2 pb-1">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          {/* Week title & Navigation controls */}
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="w-4 h-4 text-amber-500" />
-            <h3 className="text-xs sm:text-sm font-bold tracking-tight">
-              {weekRangeTitle}
-            </h3>
-
-            {/* Previous & Next week arrows */}
-            <div className="flex items-center gap-0.5 ml-1">
-              <button
-                type="button"
-                onClick={handlePrevWeek}
-                title="Previous Week"
-                aria-label="Previous Week"
-                className={`p-1 rounded-lg transition-colors cursor-pointer ${
-                  isDark
-                    ? 'hover:bg-neutral-800 text-neutral-400 hover:text-white'
-                    : 'hover:bg-neutral-200 text-neutral-600 hover:text-black'
-                }`}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={handleNextWeek}
-                title="Next Week"
-                aria-label="Next Week"
-                className={`p-1 rounded-lg transition-colors cursor-pointer ${
-                  isDark
-                    ? 'hover:bg-neutral-800 text-neutral-400 hover:text-white'
-                    : 'hover:bg-neutral-200 text-neutral-600 hover:text-black'
-                }`}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 7-Day Interactive Grid: Compact, Perfectly Aligned, With Workout Dots */}
-        <div className="grid grid-cols-7 gap-1 sm:gap-2 pt-1">
-          {weekDays.map((day) => {
-            const isSelected = day.date === selectedDate;
-            const isToday = day.isToday;
-            const dayWorkout = workouts.find((w) => w.date === day.date);
-            const exerciseCount = dayWorkout?.exercises?.length || 0;
-            const hasExercises = exerciseCount > 0;
-
-            return (
-              <button
-                key={day.date}
-                type="button"
-                onClick={() => onSelectDate(day.date)}
-                className={`py-2 px-1 sm:px-2 rounded-xl text-center transition-all cursor-pointer flex flex-col items-center justify-center relative min-h-[52px] sm:min-h-[58px] border ${
-                  isSelected
-                    ? 'bg-amber-400 text-black border-amber-400 font-extrabold shadow-md scale-[1.02] ring-2 ring-amber-400/30'
-                    : isToday
-                    ? isDark
-                      ? 'bg-[#181e2b] border-amber-400/80 text-white shadow-sm ring-1 ring-amber-400/40'
-                      : 'bg-amber-50 border-amber-400 text-neutral-900 shadow-sm ring-1 ring-amber-400/50'
-                    : isDark
-                    ? 'bg-[#141822]/80 hover:bg-[#1b202c] border-neutral-800 text-neutral-300'
-                    : 'bg-slate-50 hover:bg-neutral-100 border-neutral-200 text-neutral-700'
-                }`}
-              >
-                <span
-                  className={`text-[10px] sm:text-xs uppercase font-semibold leading-none ${
-                    isToday && !isSelected ? 'text-amber-500 font-bold' : ''
-                  }`}
-                >
-                  {day.dayOfWeek}
-                </span>
-
-                <span className="text-sm sm:text-base font-bold my-1 leading-none">
-                  {day.dayNumber}
-                </span>
-
-                {/* Status Dot: subtle dot indicating workout scheduled on this day */}
-                <div className="h-1.5 flex items-center justify-center">
-                  {hasExercises ? (
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        isSelected ? 'bg-black' : 'bg-amber-500'
-                      }`}
-                    />
-                  ) : (
-                    <span className="w-1.5 h-1.5 opacity-0" />
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      {/* 1. CALENDAR STRIP: Top Date Section (Identical in both Trainer & Client views) */}
+      <CalendarStrip
+        selectedDate={selectedDate}
+        onSelectDate={onSelectDate}
+        workouts={workouts}
+        isDark={isDark}
+      />
 
       {/* 2. CLIENT BAR: Below the Calendar Strip */}
-      <section className="pt-1 pb-2 border-b border-neutral-800/40">
+      <section className="pt-0.5 pb-1 border-b border-neutral-800/40">
         <div
           onClick={onOpenClientManager}
           className={`group flex items-center justify-between p-3 sm:p-3.5 rounded-xl border transition-all cursor-pointer ${
@@ -316,78 +195,54 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
       </section>
 
       {/* 3. SELECTED DAY PROGRAM DESIGNER */}
-      <section className="space-y-4 pt-2">
-        {/* Day Header & Action Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-transparent">
-          <div>
-            <h2 className="text-base sm:text-xl font-extrabold tracking-tight">
-              {activeDayWorkout.fullDayName}
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={onOpenLibrary}
-              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-black shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Exercise</span>
-            </button>
-          </div>
+      <section className="space-y-3">
+        {/* Action Bar - Aligned perfectly to the left with balanced symmetry and spacing */}
+        <div className="flex items-center justify-start py-0.5">
+          <button
+            type="button"
+            onClick={onOpenLibrary}
+            className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-black shadow-sm transition-all cursor-pointer flex items-center gap-1.5 hover:scale-[1.01] active:scale-[0.99]"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Add Exercise</span>
+          </button>
         </div>
 
         {/* Exercise Cards */}
         {activeDayWorkout?.exercises && activeDayWorkout.exercises.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {activeDayWorkout.exercises.map((exercise, index) => {
               return (
                 <div
                   key={exercise.id}
-                  className={`rounded-2xl border transition-all p-3.5 sm:p-5 relative ${
+                  className={`rounded-xl border transition-all p-3 sm:p-3.5 relative ${
                     isDark
-                      ? 'bg-[#141822]/80 hover:bg-[#171c28] border-neutral-800/90 shadow-lg'
-                      : 'bg-slate-50/80 hover:bg-white border-neutral-200 shadow-sm'
+                      ? 'bg-[#141822]/80 hover:bg-[#171c28] border-neutral-800/90 shadow-sm'
+                      : 'bg-slate-50/80 hover:bg-white border-neutral-200 shadow-xs'
                   }`}
                 >
-                  {/* Row 1: Exercise Name + Video demo button inline to the left + Actions */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap min-w-0">
-                      <h4
-                        className={`text-sm sm:text-base font-bold leading-tight ${
-                          isDark ? 'text-white' : 'text-neutral-900'
-                        }`}
-                      >
-                        {exercise.name}
-                      </h4>
+                  {/* Row 1: Exercise Name on Left, All Buttons (Play, Edit, Copy, Delete) on Right in ONE SINGLE LINE */}
+                  <div className="flex items-center justify-between gap-2.5">
+                    <h4
+                      className={`text-sm sm:text-base font-bold leading-tight truncate min-w-0 ${
+                        isDark ? 'text-white' : 'text-neutral-900'
+                      }`}
+                    >
+                      {exercise.name}
+                    </h4>
 
-                      {exercise.category && (
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-                            isDark
-                              ? 'bg-neutral-800 text-neutral-400'
-                              : 'bg-neutral-200 text-neutral-600'
-                          }`}
-                        >
-                          {exercise.category}
-                        </span>
-                      )}
-
-                      {/* Real Video Demonstration Button Inline */}
+                    {/* All action buttons on one neat horizontal line */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {/* Real Video Demonstration Button: yellow button with black play icon */}
                       <button
                         type="button"
                         onClick={() => onOpenVideo(exercise)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs text-amber-500 hover:text-amber-400 font-semibold cursor-pointer group bg-amber-400/10 hover:bg-amber-400/20 transition-colors"
+                        title="Watch video demo"
+                        className="w-7 h-7 rounded-lg bg-amber-400 hover:bg-amber-300 text-black flex items-center justify-center shrink-0 shadow-xs transition-colors cursor-pointer"
                       >
-                        <div className="w-3.5 h-3.5 rounded-full bg-amber-400 text-black flex items-center justify-center shrink-0">
-                          <Play className="w-2 h-2 fill-current ml-0.5" />
-                        </div>
-                        <span>Real Video Demo</span>
+                        <Play className="w-3 h-3 fill-current ml-0.5" />
                       </button>
-                    </div>
 
-                    {/* Actions menu */}
-                    <div className="flex items-center gap-1 shrink-0">
                       <button
                         type="button"
                         onClick={() => onEditExerciseClick(exercise)}
@@ -429,76 +284,62 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Row 2: Coach Designer & Modifiers (Sets, Reps, Intensity, Rest) */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-3 pt-3 border-t border-neutral-800/40">
-                    {/* SETS with Large Thumb-Friendly Circular Steppers */}
+                  {/* Row 2: Four metrics boxes (Sets, Reps, Load, Rest) - identical to Client View styling */}
+                  <div className="grid grid-cols-4 gap-2 mt-2.5 pt-2.5 border-t border-neutral-800/40 text-center">
+                    {/* SETS */}
                     <div
-                      className={`p-2.5 sm:p-3 rounded-xl border flex flex-col justify-between ${
+                      onClick={() => startEditing(exercise, 'sets')}
+                      className={`p-1.5 rounded-lg cursor-pointer transition-all ${
                         isDark
-                          ? 'bg-[#181c26]/90 border-neutral-800'
-                          : 'bg-white border-neutral-200 shadow-sm'
+                          ? 'bg-[#191d28] hover:bg-[#202534] border border-neutral-800 hover:border-amber-400/40'
+                          : 'bg-white hover:bg-neutral-50 border border-neutral-200 hover:border-amber-400/60 shadow-xs'
                       }`}
+                      title="Click to edit sets"
                     >
-                      <div className="flex items-center justify-between">
-                        <span
-                          className={`text-[10px] uppercase font-bold tracking-wider ${
-                            isDark ? 'text-neutral-400' : 'text-neutral-500'
-                          }`}
-                        >
-                          Sets
-                        </span>
-                        {/* Circular Thumb Buttons */}
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleQuickSetChange(exercise, -1)}
-                            title="Decrease sets"
-                            className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs ${
-                              isDark
-                                ? 'bg-neutral-800 hover:bg-neutral-700 border-neutral-700 text-neutral-200 hover:text-white'
-                                : 'bg-neutral-100 hover:bg-neutral-200 border-neutral-300 text-neutral-700 hover:text-black'
-                            }`}
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleQuickSetChange(exercise, 1)}
-                            title="Increase sets"
-                            className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs ${
-                              isDark
-                                ? 'bg-neutral-800 hover:bg-neutral-700 border-neutral-700 text-neutral-200 hover:text-white'
-                                : 'bg-neutral-100 hover:bg-neutral-200 border-neutral-300 text-neutral-700 hover:text-black'
-                            }`}
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                      <span className="text-base sm:text-lg font-black text-amber-500 mt-1">
-                        {exercise.sets || 3}
+                      <span
+                        className={`text-[9px] uppercase font-bold block ${
+                          isDark ? 'text-neutral-400' : 'text-neutral-500'
+                        }`}
+                      >
+                        Sets
                       </span>
+                      {editingField?.exerciseId === exercise.id &&
+                      editingField?.field === 'sets' ? (
+                        <input
+                          autoFocus
+                          type="number"
+                          value={tempValue}
+                          onChange={(e) => setTempValue(e.target.value)}
+                          onBlur={() => saveEditing(exercise.id)}
+                          onKeyDown={(e) =>
+                            e.key === 'Enter' && saveEditing(exercise.id)
+                          }
+                          className="w-full text-xs sm:text-sm font-bold bg-transparent outline-none text-amber-500 text-center"
+                        />
+                      ) : (
+                        <span className="text-xs sm:text-sm font-extrabold text-amber-500 block">
+                          {exercise.sets || 3}
+                        </span>
+                      )}
                     </div>
 
-                    {/* REPS (Tap to edit with thumb-friendly affordance) */}
+                    {/* REPS */}
                     <div
                       onClick={() => startEditing(exercise, 'reps')}
-                      className={`p-2.5 sm:p-3 rounded-xl border border-dashed transition-all cursor-pointer group flex flex-col justify-between ${
+                      className={`p-1.5 rounded-lg cursor-pointer transition-all ${
                         isDark
-                          ? 'bg-[#181c26]/90 border-neutral-700/80 hover:border-amber-400'
-                          : 'bg-white border-neutral-300 hover:border-amber-500 shadow-sm'
+                          ? 'bg-[#191d28] hover:bg-[#202534] border border-neutral-800 hover:border-amber-400/40'
+                          : 'bg-white hover:bg-neutral-50 border border-neutral-200 hover:border-amber-400/60 shadow-xs'
                       }`}
+                      title="Click to edit reps"
                     >
-                      <div className="flex items-center justify-between">
-                        <span
-                          className={`text-[10px] uppercase font-bold tracking-wider ${
-                            isDark ? 'text-neutral-400' : 'text-neutral-500'
-                          }`}
-                        >
-                          Reps
-                        </span>
-                        <Edit2 className="w-3 h-3 text-neutral-500 group-hover:text-amber-500 transition-colors" />
-                      </div>
+                      <span
+                        className={`text-[9px] uppercase font-bold block ${
+                          isDark ? 'text-neutral-400' : 'text-neutral-500'
+                        }`}
+                      >
+                        Reps
+                      </span>
                       {editingField?.exerciseId === exercise.id &&
                       editingField?.field === 'reps' ? (
                         <input
@@ -509,34 +350,32 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
                           onKeyDown={(e) =>
                             e.key === 'Enter' && saveEditing(exercise.id)
                           }
-                          className="w-full text-sm font-bold bg-transparent outline-none text-amber-500 mt-1"
+                          className="w-full text-xs sm:text-sm font-bold bg-transparent outline-none text-amber-500 text-center"
                         />
                       ) : (
-                        <span className="text-sm sm:text-base font-bold mt-1 text-inherit">
+                        <span className="text-xs sm:text-sm font-bold block text-inherit">
                           {exercise.reps || '8'}
                         </span>
                       )}
                     </div>
 
-                    {/* INTENSITY / LOAD (Tap to edit) */}
+                    {/* INTENSITY / LOAD */}
                     <div
                       onClick={() => startEditing(exercise, 'intensity')}
-                      className={`p-2.5 sm:p-3 rounded-xl border border-dashed transition-all cursor-pointer group flex flex-col justify-between ${
+                      className={`p-1.5 rounded-lg cursor-pointer transition-all ${
                         isDark
-                          ? 'bg-[#181c26]/90 border-neutral-700/80 hover:border-amber-400'
-                          : 'bg-white border-neutral-300 hover:border-amber-500 shadow-sm'
+                          ? 'bg-[#191d28] hover:bg-[#202534] border border-neutral-800 hover:border-amber-400/40'
+                          : 'bg-white hover:bg-neutral-50 border border-neutral-200 hover:border-amber-400/60 shadow-xs'
                       }`}
+                      title="Click to edit load"
                     >
-                      <div className="flex items-center justify-between">
-                        <span
-                          className={`text-[10px] uppercase font-bold tracking-wider ${
-                            isDark ? 'text-neutral-400' : 'text-neutral-500'
-                          }`}
-                        >
-                          Intensity / Load
-                        </span>
-                        <Edit2 className="w-3 h-3 text-neutral-500 group-hover:text-amber-500 transition-colors" />
-                      </div>
+                      <span
+                        className={`text-[9px] uppercase font-bold block ${
+                          isDark ? 'text-neutral-400' : 'text-neutral-500'
+                        }`}
+                      >
+                        Load
+                      </span>
                       {editingField?.exerciseId === exercise.id &&
                       editingField?.field === 'intensity' ? (
                         <input
@@ -547,34 +386,32 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
                           onKeyDown={(e) =>
                             e.key === 'Enter' && saveEditing(exercise.id)
                           }
-                          className="w-full text-sm font-bold bg-transparent outline-none text-amber-500 mt-1"
+                          className="w-full text-xs sm:text-sm font-bold bg-transparent outline-none text-amber-500 text-center"
                         />
                       ) : (
-                        <span className="text-sm sm:text-base font-bold mt-1 text-inherit">
+                        <span className="text-xs sm:text-sm font-bold block text-inherit">
                           {exercise.intensity || '35 lb'}
                         </span>
                       )}
                     </div>
 
-                    {/* REST (Tap to edit) */}
+                    {/* REST */}
                     <div
                       onClick={() => startEditing(exercise, 'rest')}
-                      className={`p-2.5 sm:p-3 rounded-xl border border-dashed transition-all cursor-pointer group flex flex-col justify-between ${
+                      className={`p-1.5 rounded-lg cursor-pointer transition-all ${
                         isDark
-                          ? 'bg-[#181c26]/90 border-neutral-700/80 hover:border-amber-400'
-                          : 'bg-white border-neutral-300 hover:border-amber-500 shadow-sm'
+                          ? 'bg-[#191d28] hover:bg-[#202534] border border-neutral-800 hover:border-amber-400/40'
+                          : 'bg-white hover:bg-neutral-50 border border-neutral-200 hover:border-amber-400/60 shadow-xs'
                       }`}
+                      title="Click to edit rest"
                     >
-                      <div className="flex items-center justify-between">
-                        <span
-                          className={`text-[10px] uppercase font-bold tracking-wider ${
-                            isDark ? 'text-neutral-400' : 'text-neutral-500'
-                          }`}
-                        >
-                          Rest
-                        </span>
-                        <Edit2 className="w-3 h-3 text-neutral-500 group-hover:text-amber-500 transition-colors" />
-                      </div>
+                      <span
+                        className={`text-[9px] uppercase font-bold block ${
+                          isDark ? 'text-neutral-400' : 'text-neutral-500'
+                        }`}
+                      >
+                        Rest
+                      </span>
                       {editingField?.exerciseId === exercise.id &&
                       editingField?.field === 'rest' ? (
                         <input
@@ -585,31 +422,15 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
                           onKeyDown={(e) =>
                             e.key === 'Enter' && saveEditing(exercise.id)
                           }
-                          className="w-full text-sm font-bold bg-transparent outline-none text-amber-500 mt-1"
+                          className="w-full text-xs sm:text-sm font-bold bg-transparent outline-none text-amber-500 text-center"
                         />
                       ) : (
-                        <span className="text-sm sm:text-base font-bold mt-1 text-inherit">
-                          {exercise.rest || '60 sec'}
+                        <span className="text-xs sm:text-sm font-bold block text-inherit">
+                          {exercise.rest || '60s'}
                         </span>
                       )}
                     </div>
                   </div>
-
-                  {/* Notes & Cues Row */}
-                  {exercise.notes && (
-                    <div
-                      className={`mt-2.5 pt-2 border-t text-xs flex items-start gap-2 ${
-                        isDark
-                          ? 'border-neutral-800/40 text-neutral-400'
-                          : 'border-neutral-200 text-neutral-600'
-                      }`}
-                    >
-                      <span className="text-amber-500 font-semibold shrink-0">
-                        Coach Note:
-                      </span>
-                      <span>{exercise.notes}</span>
-                    </div>
-                  )}
                 </div>
               );
             })}

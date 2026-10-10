@@ -154,113 +154,55 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({
         </div>
 
         {/* Exercise Grid */}
-        <div className="p-4 sm:p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-3.5 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-2.5 flex-1">
           {filtered.map((item, idx) => (
             <div
               key={idx}
-              className={`p-4 rounded-xl border transition-all flex flex-col justify-between gap-3 group ${
+              className={`p-3 sm:p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 group ${
                 isDark
                   ? 'bg-[#151922] border-neutral-800/80 hover:border-amber-400/40 hover:bg-[#1a202c]'
-                  : 'bg-slate-50 border-neutral-200 hover:border-amber-400/60 hover:bg-white shadow-sm'
+                  : 'bg-slate-50 border-neutral-200 hover:border-amber-400/60 hover:bg-white shadow-xs'
               }`}
             >
-              <div>
-                <div className="flex items-center justify-between mb-1.5 gap-2">
-                  <h4 className="font-bold text-sm group-hover:text-amber-500 transition-colors">
-                    {item.name}
-                  </h4>
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded font-semibold shrink-0 ${
-                      isDark
-                        ? 'bg-neutral-800 text-neutral-300'
-                        : 'bg-neutral-200 text-neutral-700'
-                    }`}
-                  >
-                    {item.category}
-                  </span>
-                </div>
-                <p
-                  className={`text-xs mb-2.5 ${
-                    isDark ? 'text-neutral-400' : 'text-neutral-600'
-                  }`}
-                >
-                  {item.notes}
-                </p>
-
-                {item.cues && (
-                  <div
-                    className={`space-y-1 p-2.5 rounded-lg border mb-2 ${
-                      isDark
-                        ? 'bg-[#101318] border-neutral-800/70'
-                        : 'bg-white border-neutral-200'
-                    }`}
-                  >
-                    <span className="text-[10px] uppercase font-bold text-amber-500 tracking-wider">
-                      Coaching Checkpoints:
-                    </span>
-                    <ul
-                      className={`text-[11px] space-y-0.5 ${
-                        isDark ? 'text-neutral-300' : 'text-neutral-700'
-                      }`}
-                    >
-                      {item.cues.map((cue, cIdx) => (
-                        <li key={cIdx} className="truncate">
-                          · {cue}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              <div
-                className={`flex items-center justify-between pt-2.5 border-t ${
-                  isDark ? 'border-neutral-800' : 'border-neutral-200'
+              <h4
+                className={`font-bold text-sm truncate min-w-0 transition-colors ${
+                  isDark
+                    ? 'text-white group-hover:text-amber-400'
+                    : 'text-neutral-900 group-hover:text-amber-500'
                 }`}
               >
-                <div
-                  className={`text-[11px] font-mono ${
-                    isDark ? 'text-neutral-400' : 'text-neutral-500'
-                  }`}
-                >
-                  {item.sets} sets × {item.reps} · {item.intensity}
-                </div>
+                {item.name}
+              </h4>
 
-                <div className="flex items-center gap-2">
-                  {onPreviewVideo && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onPreviewVideo({
-                          ...item,
-                          id: `preview-${idx}`,
-                          completed: false,
-                        })
-                      }
-                      className={`p-2 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold ${
-                        isDark
-                          ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200'
-                          : 'bg-neutral-200 hover:bg-neutral-300 text-neutral-800'
-                      }`}
-                      title="Watch Real Video Demonstration"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-current text-amber-500" />
-                      <span>Video</span>
-                    </button>
-                  )}
-                  {onSelectExercise && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSelectExercise(item);
-                        onClose();
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-amber-400 text-black text-xs font-bold hover:bg-amber-300 transition-colors shadow-sm cursor-pointer flex items-center gap-1"
-                    >
-                      <span>+ Add</span>
-                    </button>
-                  )}
-                </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {onPreviewVideo && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onPreviewVideo({
+                        ...item,
+                        id: `preview-${idx}`,
+                        completed: false,
+                      })
+                    }
+                    title="Watch video demo"
+                    className="w-7 h-7 rounded-lg bg-amber-400 hover:bg-amber-300 text-black flex items-center justify-center shrink-0 shadow-xs transition-colors cursor-pointer"
+                  >
+                    <Play className="w-3 h-3 fill-current ml-0.5" />
+                  </button>
+                )}
+                {onSelectExercise && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectExercise(item);
+                      onClose();
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-amber-400 text-black text-xs font-bold hover:bg-amber-300 transition-colors shadow-xs cursor-pointer flex items-center gap-1"
+                  >
+                    <span>+ Add</span>
+                  </button>
+                )}
               </div>
             </div>
           ))}
