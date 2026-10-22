@@ -24,6 +24,11 @@ import {
   ThemeMode,
 } from '../types';
 import { getOrCreateDayWorkout } from '../utils/dateUtils';
+import {
+  DateRangeCalendarModal,
+  formatDateRangeLabel,
+  formatShortDateLabel,
+} from './DateRangeCalendarModal';
 
 export type ClientBottomTab =
   | 'today'
@@ -161,12 +166,28 @@ export const ClientView: React.FC<ClientViewProps> = ({
     setIsCommentOpen(false);
   };
 
+  // Interactive Calendar Modal state for Client Workouts tab
+  const [dateRangeStart, setDateRangeStart] = useState<string>('2026-10-15');
+  const [dateRangeEnd, setDateRangeEnd] = useState<string>('2026-10-22');
+  const [isDateRangeModalOpen, setIsDateRangeModalOpen] =
+    useState<boolean>(false);
+
+  const workoutDatesList = React.useMemo(
+    () => workouts.filter((d) => d.exercises.length > 0).map((d) => d.date),
+    [workouts]
+  );
+
   const clientWorkoutDays = React.useMemo(() => {
     const daysWithExercises = workouts.filter((d) => d.exercises.length > 0);
-    return [...daysWithExercises]
-      .filter((d) => d.date >= '2026-10-15' && d.date <= '2026-10-25')
+    const filtered = [...daysWithExercises]
+      .filter((d) => d.date >= dateRangeStart && d.date <= dateRangeEnd)
       .sort((a, b) => b.date.localeCompare(a.date));
-  }, [workouts]);
+
+    if (filtered.length === 0 && dateRangeStart) {
+      return [getOrCreateDayWorkout(workouts, dateRangeStart)];
+    }
+    return filtered;
+  }, [workouts, dateRangeStart, dateRangeEnd]);
 
   const getWorkoutStatus = (
     day: DayWorkout
@@ -185,10 +206,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
 
   const formatFullDateLabel = (dateStr: string): string => {
     if (dateStr === '2026-10-21') return 'Today';
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return dateStr;
-    const dayNum = parseInt(parts[2], 10);
-    return `Oct ${dayNum}, ${parts[0]}`;
+    return formatShortDateLabel(dateStr);
   };
 
   const handleCompleteWorkout = () => {
@@ -403,12 +421,16 @@ export const ClientView: React.FC<ClientViewProps> = ({
       {bottomTab === 'workouts' && (
         <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] overflow-hidden">
           <div className="bg-white p-3.5 border-b border-neutral-200/80 shrink-0">
-            <div className="border border-neutral-200 rounded-full px-4 py-2.5 flex items-center justify-between bg-white">
+            <button
+              type="button"
+              onClick={() => setIsDateRangeModalOpen(true)}
+              className="w-full border border-neutral-200 hover:border-amber-400 rounded-full px-4 py-2.5 flex items-center justify-between bg-white hover:bg-neutral-50 transition-colors cursor-pointer"
+            >
               <span className="text-xs sm:text-sm font-medium text-neutral-700 truncate">
-                Oct 15 - Oct 22, 2026
+                {formatDateRangeLabel(dateRangeStart, dateRangeEnd)}
               </span>
               <Calendar className="w-4 h-4 text-neutral-600 shrink-0" />
-            </div>
+            </button>
           </div>
 
           <div className="flex-1 min-h-0 p-4 space-y-4 overflow-y-auto">
@@ -849,6 +871,28 @@ export const ClientView: React.FC<ClientViewProps> = ({
           <span className="text-[10px] truncate max-w-full">Account</span>
         </button>
       </nav>
+
+      {/* Interactive Date Range Calendar Modal for Client Workouts */}
+      <DateRangeCalendarModal
+        isOpen={isDateRangeModalOpen}
+        onClose={() => setIsDateRangeModalOpen(false)}
+        startDate={dateRangeStart}
+        endDate={dateRangeEnd}
+        onApplyRange={(start, end) => {
+          setDateRangeStart(start);
+          setDateRangeEnd(end);
+        }}
+        workoutDates={workoutDatesList}
+        onOpenSingleDay={(dateStr) => {
+          onSelectDate(dateStr);
+          setOpenedFromSchedule(true);
+          if (onBottomTabChange) {
+            onBottomTabChange('today');
+          } else {
+            setInternalTab('today');
+          }
+        }}
+      />
     </div>
   );
 };

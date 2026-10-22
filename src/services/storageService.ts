@@ -109,6 +109,9 @@ export function getInitialEnrichedClients(): ClientProfile[] {
     const username = getClientDefaultUsername(c);
     return {
       ...c,
+      avatarUrl: c.avatarUrl?.startsWith('data:image/')
+        ? c.avatarUrl
+        : undefined,
       username,
       password: c.password || 'client123',
       macroTargets: c.macroTargets || {
@@ -217,7 +220,14 @@ export function loadClients(): ClientProfile[] {
     const raw = localStorage.getItem(STORAGE_KEYS.CLIENTS);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((c: ClientProfile) => ({
+          ...c,
+          avatarUrl: c.avatarUrl?.startsWith('data:image/')
+            ? c.avatarUrl
+            : undefined,
+        }));
+      }
     }
   } catch (e) {
     console.error('Failed to load clients from storage', e);
