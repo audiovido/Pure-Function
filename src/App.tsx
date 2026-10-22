@@ -60,6 +60,10 @@ export default function App() {
   // Always start on the Trainer Sign In / Client Sign In screen on page load or reload
   const [activeAccount, setActiveAccount] = useState<AuthAccount | null>(null);
 
+  // Initial 1.5s Splash Screen state (large centered logo -> fast fade-out)
+  const [showSplash, setShowSplash] = useState<boolean>(true);
+  const [isSplashFading, setIsSplashFading] = useState<boolean>(false);
+
   const [viewMode, setViewMode] = useState<AppViewMode>('trainer');
 
   const [trainerBottomTab, setTrainerBottomTab] =
@@ -95,6 +99,22 @@ export default function App() {
   const [isLibraryOpen, setIsLibraryOpen] = useState<boolean>(false);
   const [isProgramsOpen, setIsProgramsOpen] = useState<boolean>(false);
   const [isClientManagerOpen, setIsClientManagerOpen] = useState<boolean>(false);
+
+  // 1.5s Splash Screen timer -> fast 300ms fade-out into Sign-In page
+  useEffect(() => {
+    const fadeTimer = setTimeout(() => {
+      setIsSplashFading(true);
+    }, 1500);
+
+    const hideTimer = setTimeout(() => {
+      setShowSplash(false);
+    }, 1800);
+
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(hideTimer);
+    };
+  }, []);
 
   // Sync theme to localStorage
   useEffect(() => {
@@ -494,15 +514,33 @@ export default function App() {
   };
 
   // If not signed in, show the dedicated TrueCoach Role-Based Sign-In Screen first
+  // (with the 1.5s large centered logo splash screen fading out on initial load)
   if (!activeAccount) {
     return (
-      <AuthScreen
-        accounts={accounts}
-        clients={clients}
-        onAuthenticated={handleAuthenticated}
-        onRegisterAccount={handleRegisterAccount}
-        theme={theme}
-      />
+      <>
+        {showSplash && (
+          <div
+            className={`fixed inset-0 z-50 flex items-center justify-center bg-[#232328] px-6 transition-all duration-300 ease-out ${
+              isSplashFading
+                ? 'opacity-0 scale-[1.03] pointer-events-none'
+                : 'opacity-100 scale-100'
+            }`}
+          >
+            <img
+              src="/assets/aistudio/e5685ed9-a821-4018-a4d5-65b77ca837e3_698af197.JPG"
+              alt="Pure Function Fitness Center"
+              className="w-full max-w-[380px] sm:max-w-[500px] md:max-w-[580px] h-auto object-contain select-none"
+            />
+          </div>
+        )}
+        <AuthScreen
+          accounts={accounts}
+          clients={clients}
+          onAuthenticated={handleAuthenticated}
+          onRegisterAccount={handleRegisterAccount}
+          theme={theme}
+        />
+      </>
     );
   }
 
