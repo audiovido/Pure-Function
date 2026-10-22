@@ -12,7 +12,6 @@ import {
   Camera,
   Mic,
   ArrowUp,
-  Edit2,
   ClipboardCheck,
 } from 'lucide-react';
 import {
@@ -85,10 +84,8 @@ export const ClientView: React.FC<ClientViewProps> = ({
   selectedDate,
   onSelectDate,
   onToggleExerciseDone,
-  onLogExerciseResult,
   onCompleteSession,
   onOpenVideo,
-  onOpenAssessments,
   dailyNutrition,
   onUpdateDailyNutrition,
   onUpdateHomework,
@@ -102,11 +99,6 @@ export const ClientView: React.FC<ClientViewProps> = ({
   const bottomTab = onBottomTabChange ? activeBottomTab : internalTab;
 
   const [openedFromSchedule, setOpenedFromSchedule] = useState(false);
-
-  // Exercise result logging state
-  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
-  const [logWeight, setLogWeight] = useState('');
-  const [logReps, setLogReps] = useState('');
 
   // Workout comment box
   const [isCommentOpen, setIsCommentOpen] = useState(false);
@@ -124,7 +116,6 @@ export const ClientView: React.FC<ClientViewProps> = ({
       setInternalTab(tab);
     }
     setOpenedFromSchedule(false);
-    setExpandedLogId(null);
     setIsCommentOpen(false);
   };
 
@@ -156,30 +147,6 @@ export const ClientView: React.FC<ClientViewProps> = ({
     if (parts.length !== 3) return dateStr;
     const dayNum = parseInt(parts[2], 10);
     return `Oct ${dayNum}, ${parts[0]}`;
-  };
-
-  const openExerciseLogger = (exercise: Exercise) => {
-    if (expandedLogId === exercise.id) {
-      setExpandedLogId(null);
-      return;
-    }
-    setExpandedLogId(exercise.id);
-    setLogWeight(exercise.actualWeight || exercise.intensity || '');
-    setLogReps(exercise.actualReps || exercise.reps || '');
-  };
-
-  const handleSaveExerciseLog = (exercise: Exercise) => {
-    if (onLogExerciseResult) {
-      onLogExerciseResult(selectedDate, exercise.id, {
-        actualWeight: logWeight.trim() || exercise.intensity,
-        actualReps: logReps.trim() || exercise.reps,
-        completed: true,
-        completedAt: new Date().toISOString(),
-      });
-    } else {
-      onToggleExerciseDone(selectedDate, exercise.id);
-    }
-    setExpandedLogId(null);
   };
 
   const handleCompleteWorkout = () => {
@@ -235,14 +202,14 @@ export const ClientView: React.FC<ClientViewProps> = ({
   const isWorkoutCompleted = getWorkoutStatus(activeDayWorkout) === 'Completed';
 
   return (
-    <div className="w-full max-w-2xl mx-auto min-h-[calc(100vh-120px)] flex flex-col bg-[#f4f5f7] rounded-3xl overflow-hidden border border-neutral-200/90 shadow-sm relative pb-20">
+    <div className="w-full max-w-2xl mx-auto min-h-[calc(100vh-120px)] flex flex-col bg-[#f4f5f7] rounded-3xl overflow-hidden border border-neutral-200/90 shadow-sm relative">
       {/* =========================================================
-          TAB 1: TODAY'S WORKOUT (Ultra-Minimal & Clean)
+          TAB 1: TODAY'S WORKOUT (Read-Only Trainer Prescription)
          ========================================================= */}
       {bottomTab === 'today' && (
         <div className="flex-1 flex flex-col bg-[#f4f5f7]">
           {/* Top Amber Bar with Clean Circular White Avatar */}
-          <div className="bg-amber-400 px-4 py-3.5 text-black">
+          <div className="bg-amber-400 px-4 py-3.5 text-black shrink-0">
             <div className="flex items-center justify-between gap-2">
               {openedFromSchedule ? (
                 <button
@@ -283,7 +250,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
             </div>
           </div>
 
-          {/* Clean Exercise Cards (No A/B Badges, No Long Text) */}
+          {/* Clean Exercise Cards (Strictly What Trainer Assigned — No Edit Button) */}
           <div className="flex-1 p-4 space-y-3 overflow-y-auto">
             {activeDayWorkout.exercises.length === 0 ? (
               <div className="bg-white rounded-3xl p-8 text-center border border-neutral-200/70 my-6">
@@ -292,92 +259,44 @@ export const ClientView: React.FC<ClientViewProps> = ({
                 </p>
               </div>
             ) : (
-              activeDayWorkout.exercises.map((ex) => {
-                const isLoggerOpen = expandedLogId === ex.id;
-                return (
-                  <div
-                    key={ex.id}
-                    className="bg-white rounded-3xl p-4 shadow-2xs border border-neutral-200/60 space-y-3 overflow-hidden"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onToggleExerciseDone(selectedDate, ex.id)
-                          }
-                          className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-colors ${
-                            ex.completed
-                              ? 'bg-amber-400 text-black'
-                              : 'bg-neutral-200/80 text-neutral-400 hover:bg-neutral-300'
-                          }`}
-                          title="Complete"
-                        >
-                          <Check className="w-4 h-4 stroke-[2.6]" />
-                        </button>
+              activeDayWorkout.exercises.map((ex) => (
+                <div
+                  key={ex.id}
+                  className="bg-white rounded-3xl p-4 shadow-2xs border border-neutral-200/60 overflow-hidden"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onToggleExerciseDone(selectedDate, ex.id)
+                      }
+                      className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-colors ${
+                        ex.completed
+                          ? 'bg-amber-400 text-black'
+                          : 'bg-neutral-200/80 text-neutral-400 hover:bg-neutral-300'
+                      }`}
+                      title="Complete"
+                    >
+                      <Check className="w-4 h-4 stroke-[2.6]" />
+                    </button>
 
-                        <div className="min-w-0 flex-1">
-                          <button
-                            type="button"
-                            onClick={() => onOpenVideo(ex)}
-                            className="w-full font-bold text-sm sm:text-base text-neutral-900 hover:text-amber-600 transition-colors text-left flex items-center gap-1.5 cursor-pointer min-w-0"
-                          >
-                            <span className="truncate">{ex.name}</span>
-                            <Play className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                          </button>
-                          <div className="text-xs text-neutral-500 mt-0.5 truncate">
-                            {ex.sets} sets × {ex.reps}
-                            {ex.intensity ? ` · ${ex.intensity}` : ''}
-                          </div>
-                          {(ex.actualWeight || ex.actualReps) &&
-                            !isLoggerOpen && (
-                              <div className="text-xs font-semibold text-amber-600 mt-0.5 truncate">
-                                Logged: {ex.actualWeight || ex.intensity} ×{' '}
-                                {ex.actualReps || ex.reps}
-                              </div>
-                            )}
-                        </div>
-                      </div>
-
+                    <div className="min-w-0 flex-1">
                       <button
                         type="button"
-                        onClick={() => openExerciseLogger(ex)}
-                        className="w-9 h-9 rounded-full text-neutral-600 hover:text-black hover:bg-neutral-100 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-                        title="Log result"
+                        onClick={() => onOpenVideo(ex)}
+                        className="w-full font-bold text-sm sm:text-base text-neutral-900 hover:text-amber-600 transition-colors text-left flex items-center gap-1.5 cursor-pointer min-w-0"
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <span className="truncate">{ex.name}</span>
+                        <Play className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                       </button>
-                    </div>
-
-                    {/* Compact Inline Result Logger */}
-                    {isLoggerOpen && (
-                      <div className="pt-3 border-t border-neutral-100 flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={logWeight}
-                          onChange={(e) => setLogWeight(e.target.value)}
-                          placeholder="Weight"
-                          className="w-full min-w-0 px-3 py-2 rounded-full border border-neutral-200 text-xs text-neutral-900 outline-none focus:border-amber-400"
-                        />
-                        <input
-                          type="text"
-                          value={logReps}
-                          onChange={(e) => setLogReps(e.target.value)}
-                          placeholder="Reps"
-                          className="w-full min-w-0 px-3 py-2 rounded-full border border-neutral-200 text-xs text-neutral-900 outline-none focus:border-amber-400"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleSaveExerciseLog(ex)}
-                          className="px-4 py-2 rounded-full bg-amber-400 text-black font-bold text-xs cursor-pointer shrink-0"
-                        >
-                          Save
-                        </button>
+                      <div className="text-xs text-neutral-500 mt-0.5 truncate">
+                        {ex.sets} sets × {ex.reps}
+                        {ex.intensity ? ` · ${ex.intensity}` : ''}
                       </div>
-                    )}
+                    </div>
                   </div>
-                );
-              })
+                </div>
+              ))
             )}
 
             {/* Minimal Comment Input */}
@@ -404,8 +323,8 @@ export const ClientView: React.FC<ClientViewProps> = ({
             )}
           </div>
 
-          {/* Bottom Action Pills */}
-          <div className="bg-white border-t border-neutral-200/80 p-3.5 grid grid-cols-2 gap-3">
+          {/* Bottom Action Pills — Flush at the bottom right above the navigation bar */}
+          <div className="mt-auto shrink-0 bg-white border-t border-neutral-200/80 p-3.5 grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => setIsCommentOpen((prev) => !prev)}
@@ -433,7 +352,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
          ========================================================= */}
       {bottomTab === 'workouts' && (
         <div className="flex-1 flex flex-col bg-[#f4f5f7]">
-          <div className="bg-white p-3.5 border-b border-neutral-200/80">
+          <div className="bg-white p-3.5 border-b border-neutral-200/80 shrink-0">
             <div className="border border-neutral-200 rounded-full px-4 py-2.5 flex items-center justify-between bg-white">
               <span className="text-xs sm:text-sm font-medium text-neutral-700 truncate">
                 Oct 15 - Oct 22, 2026
@@ -610,8 +529,8 @@ export const ClientView: React.FC<ClientViewProps> = ({
           TAB 4: DIRECT CHAT WITH COACH
          ========================================================= */}
       {bottomTab === 'messages' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7] min-h-[540px]">
-          <div className="bg-amber-400 px-4 py-3.5 flex items-center justify-center text-black">
+        <div className="flex-1 flex flex-col bg-[#f4f5f7]">
+          <div className="bg-amber-400 px-4 py-3.5 flex items-center justify-center text-black shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 rounded-full bg-white text-neutral-900 font-bold text-xs flex items-center justify-center shadow-xs shrink-0">
                 {getInitials(client.coach || 'Coach')}
@@ -663,7 +582,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
 
           <form
             onSubmit={handleSendChat}
-            className="bg-white border-t border-neutral-200 px-3.5 py-3 flex items-center gap-2.5"
+            className="mt-auto shrink-0 bg-white border-t border-neutral-200 px-3.5 py-3 flex items-center gap-2.5"
           >
             <button
               type="button"
@@ -705,12 +624,12 @@ export const ClientView: React.FC<ClientViewProps> = ({
       )}
 
       {/* =========================================================
-          TAB 5: CLIENT ACCOUNT (Clean Circular Avatar, Concise Rows)
+          TAB 5: CLIENT ACCOUNT (Read-Only Assigned Info & Navigation)
          ========================================================= */}
       {bottomTab === 'account' && (
         <div className="flex-1 flex flex-col bg-[#f4f5f7]">
           {/* Top Amber Profile Banner with Clean White Circular Avatar */}
-          <div className="bg-amber-400 px-5 py-5 flex items-center gap-3.5 text-black">
+          <div className="bg-amber-400 px-5 py-5 flex items-center gap-3.5 text-black shrink-0">
             <div className="w-14 h-14 rounded-full bg-white text-neutral-900 font-black text-base flex items-center justify-center shadow-sm shrink-0">
               {getInitials(client.name)}
             </div>
@@ -724,13 +643,13 @@ export const ClientView: React.FC<ClientViewProps> = ({
             </div>
           </div>
 
-          {/* Minimal Settings List */}
+          {/* Minimal Navigation Rows */}
           <div className="p-4 flex-1 flex flex-col justify-between space-y-5">
             <div className="bg-white rounded-3xl shadow-2xs border border-neutral-200/70 divide-y divide-neutral-200/70 overflow-hidden">
               {[
                 {
-                  label: 'Progress & Metrics',
-                  action: onOpenAssessments,
+                  label: 'Today',
+                  action: () => handleSelectBottomTab('today'),
                 },
                 {
                   label: 'Workouts',
@@ -779,7 +698,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
          ========================================================= */}
       <nav
         aria-label="Client bottom navigation"
-        className="fixed sm:absolute bottom-0 inset-x-0 bg-white border-t border-neutral-200 px-2 py-2 grid grid-cols-5 z-30"
+        className="shrink-0 bg-white border-t border-neutral-200 px-2 py-2 grid grid-cols-5 z-30"
       >
         <button
           type="button"

@@ -446,7 +446,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
   }, [clientWorkoutDays, selectedClient]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto min-h-[calc(100vh-120px)] flex flex-col bg-[#f4f5f7] rounded-3xl overflow-hidden border border-neutral-200/90 shadow-sm relative pb-20">
+    <div className="w-full max-w-2xl mx-auto min-h-[calc(100vh-120px)] flex flex-col bg-[#f4f5f7] rounded-3xl overflow-hidden border border-neutral-200/90 shadow-sm relative">
       {/* =========================================================
           SUB-SCREEN A: CLIENT PROFILE (Inspired by IMG_3524)
          ========================================================= */}
@@ -1296,7 +1296,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
             )}
           </div>
 
-          <div className="bg-white border-t border-neutral-200/80 p-3.5 grid grid-cols-2 gap-3">
+          <div className="mt-auto shrink-0 bg-white border-t border-neutral-200/80 p-3.5 grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => setIsCommentOpen((prev) => !prev)}
@@ -1736,7 +1736,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
          ========================================================= */}
       <nav
         aria-label="Trainer bottom navigation"
-        className="fixed sm:absolute bottom-0 inset-x-0 bg-white border-t border-neutral-200 px-2 py-2 grid grid-cols-5 z-30"
+        className="shrink-0 bg-white border-t border-neutral-200 px-2 py-2 grid grid-cols-5 z-30"
       >
         <button
           type="button"

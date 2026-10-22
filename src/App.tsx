@@ -546,12 +546,12 @@ export default function App() {
       */}
       <header className="sticky top-0 z-40 overflow-hidden bg-gradient-to-b from-[#2b303c] via-[#1d212b] to-[#14171f] border-b border-neutral-700/70 px-3 sm:px-6 py-2.5 shadow-[0_6px_18px_-4px_rgba(20,23,31,0.28),inset_0_1px_1px_rgba(255,255,255,0.14)]">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.07] to-transparent" />
-        <div className="relative z-10 max-w-6xl mx-auto flex items-center justify-between min-h-[38px] sm:min-h-[44px]">
+        <div className="relative z-10 max-w-6xl mx-auto flex items-center justify-between min-h-[42px] sm:min-h-[48px]">
           {/* Left: Pure Function Logo in White & Yellow */}
           <div className="flex items-center py-0.5">
             <PureFunctionLogo
               theme="dark"
-              className="h-8 sm:h-9 md:h-10"
+              className="h-9 sm:h-11 md:h-12"
             />
           </div>
 
