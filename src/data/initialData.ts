@@ -506,7 +506,46 @@ export const INITIAL_OCTOBER_WORKOUTS: DayWorkout[] = [
     dayNumber: 15,
     fullDayName: 'Thursday, October 15',
     focus: 'Lower body strength',
-    exercises: [],
+    coachNotes: 'Focus on controlled 3-second eccentric on Goblet Squats and RDL hip hinge.',
+    sessionCompleted: true,
+    sessionDurationMinutes: 52,
+    sessionRpe: 8,
+    clientSessionFeedback: 'Hip internal rotation felt much smoother today. Zero patellar discomfort.',
+    exercises: [
+      {
+        id: 'ex-oct15-1',
+        name: 'Goblet Squat',
+        sets: 4,
+        reps: '8',
+        intensity: '40 lb',
+        rest: '90 sec',
+        notes: '3-second eccentric, 1-second pause at bottom.',
+        completed: true,
+        actualSets: 4,
+        actualReps: '8, 8, 8, 8',
+        actualWeight: '40 lb',
+        rpe: '7.5',
+        clientNotes: 'Depth was rock solid.',
+        category: 'Lower body',
+        youtubeId: 'MeIiIdhvXT4',
+      },
+      {
+        id: 'ex-oct15-2',
+        name: 'Single-leg Romanian Deadlift (RDL)',
+        sets: 3,
+        reps: '8 / leg',
+        intensity: '35 lb',
+        rest: '75 sec',
+        notes: 'Keep pelvis square to floor.',
+        completed: true,
+        actualSets: 3,
+        actualReps: '8 / leg',
+        actualWeight: '35 lb',
+        rpe: '8',
+        category: 'Lower body',
+        youtubeId: 'iH4Q5dYpB1E',
+      },
+    ],
   },
   {
     date: '2026-10-16',
@@ -522,7 +561,43 @@ export const INITIAL_OCTOBER_WORKOUTS: DayWorkout[] = [
     dayNumber: 17,
     fullDayName: 'Saturday, October 17',
     focus: 'Conditioning',
-    exercises: [],
+    sessionCompleted: true,
+    sessionDurationMinutes: 40,
+    sessionRpe: 7,
+    exercises: [
+      {
+        id: 'ex-oct17-1',
+        name: 'Hardstyle Kettlebell Swings',
+        sets: 5,
+        reps: '15',
+        intensity: '24 kg',
+        rest: '60 sec',
+        notes: 'Crisp hip snap, ribs stacked at lockout.',
+        completed: true,
+        actualSets: 5,
+        actualReps: '15',
+        actualWeight: '24 kg',
+        rpe: '7',
+        category: 'Conditioning',
+        youtubeId: 'YSxHifyI608',
+      },
+      {
+        id: 'ex-oct17-2',
+        name: 'Pallof Press',
+        sets: 3,
+        reps: '12 / side',
+        intensity: 'Medium Band',
+        rest: '45 sec',
+        notes: '2-second isometric hold at full extension.',
+        completed: true,
+        actualSets: 3,
+        actualReps: '12 / side',
+        actualWeight: 'Medium Band',
+        rpe: '6.5',
+        category: 'Core',
+        youtubeId: 'AH_QZLm_0-s',
+      },
+    ],
   },
   {
     date: '2026-10-18',
@@ -537,48 +612,255 @@ export const INITIAL_OCTOBER_WORKOUTS: DayWorkout[] = [
     dayOfWeek: 'Mon',
     dayNumber: 19,
     fullDayName: 'Monday, October 19',
-    focus: 'Upper body hyper',
-    exercises: [],
+    focus: 'Upper body hypertrophy & scapular control',
+    coachNotes: 'Keep ribcage stacked on overhead and incline pressing. Log actual dumbbell loads.',
+    sessionCompleted: true,
+    sessionDurationMinutes: 55,
+    sessionRpe: 8,
+    clientSessionFeedback: 'Felt strong on Incline Press, bumped up 5 lbs on final two sets.',
+    exercises: [
+      {
+        id: 'ex-oct19-1',
+        name: 'Incline Dumbbell Press',
+        sets: 4,
+        reps: '8-10',
+        intensity: '50 lb',
+        rest: '90 sec',
+        notes: '30-degree bench angle, full stretch at bottom.',
+        completed: true,
+        actualSets: 4,
+        actualReps: '10, 10, 8, 8',
+        actualWeight: '55 lb',
+        rpe: '8.5',
+        clientNotes: 'Moved up to 55 lb DBs with clean control.',
+        category: 'Upper body',
+        youtubeId: '8iPEnn-ltC8',
+      },
+      {
+        id: 'ex-oct19-2',
+        name: 'Chest Supported Dumbbell Row',
+        sets: 4,
+        reps: '10',
+        intensity: '45 lb',
+        rest: '75 sec',
+        notes: '1-second squeeze in full retraction.',
+        completed: true,
+        actualSets: 4,
+        actualReps: '10',
+        actualWeight: '45 lb',
+        rpe: '8',
+        category: 'Upper body',
+        youtubeId: 'H75im9fAUMc',
+      },
+      {
+        id: 'ex-oct19-3',
+        name: 'Dead Bug',
+        sets: 3,
+        reps: '10 / side',
+        intensity: 'Bodyweight',
+        rest: '45 sec',
+        notes: 'Exhale fully as opposite arm and leg extend.',
+        completed: true,
+        actualSets: 3,
+        actualReps: '10 / side',
+        actualWeight: 'Bodyweight',
+        rpe: '6.5',
+        category: 'Core',
+        youtubeId: 'g_BYB0R-4Ws',
+      },
+    ],
   },
   {
     date: '2026-10-20',
     dayOfWeek: 'Tue',
     dayNumber: 20,
     fullDayName: 'Tuesday, October 20',
-    focus: null,
-    exercises: [],
+    focus: 'Mobility & Pelvic Reset',
+    exercises: [
+      {
+        id: 'ex-oct20-1',
+        name: '90/90 breathing',
+        sets: 3,
+        reps: '5 breaths',
+        intensity: 'Bodyweight',
+        rest: '30 sec',
+        notes: '4s nasal inhale, 6s long exhale.',
+        completed: true,
+        actualSets: 3,
+        actualReps: '5 breaths',
+        actualWeight: 'Bodyweight',
+        rpe: '5',
+        category: 'Mobility',
+        youtubeId: 'r6Zf4GZ0E0Q',
+      },
+      {
+        id: 'ex-oct20-2',
+        name: "World's Greatest Stretch",
+        sets: 2,
+        reps: '5 / side',
+        intensity: 'Bodyweight',
+        rest: '30 sec',
+        notes: 'Open thoracic spine cleanly toward ceiling.',
+        completed: true,
+        actualSets: 2,
+        actualReps: '5 / side',
+        actualWeight: 'Bodyweight',
+        rpe: '5',
+        category: 'Mobility',
+        youtubeId: '2fBf_yB4xQc',
+      },
+    ],
   },
   {
     date: '2026-10-21',
     dayOfWeek: 'Wed',
     dayNumber: 21,
     fullDayName: 'Wednesday, October 21',
-    focus: null,
-    exercises: [],
+    focus: 'Lower Body Symmetry & Posterior Chain',
+    coachNotes: 'Primary lower body block session. Prioritize tripod foot stability on Bulgarian Split Squats and record your working loads.',
+    exercises: [
+      {
+        id: 'ex-oct21-1',
+        name: '90/90 breathing',
+        sets: 2,
+        reps: '5 breaths',
+        intensity: 'Bodyweight',
+        rest: '30 sec',
+        notes: 'Stack ribcage over pelvis before loading.',
+        completed: true,
+        actualSets: 2,
+        actualReps: '5 breaths',
+        actualWeight: 'Bodyweight',
+        rpe: '5',
+        clientNotes: 'Great pelvic neutrality.',
+        category: 'Mobility',
+        youtubeId: 'r6Zf4GZ0E0Q',
+      },
+      {
+        id: 'ex-oct21-2',
+        name: 'Barbell Romanian Deadlift',
+        sets: 4,
+        reps: '8',
+        intensity: '145 lb',
+        rest: '120 sec',
+        notes: '3-second eccentric hinge, keep lats packed tight.',
+        completed: false,
+        category: 'Lower body',
+        youtubeId: 'JCXUYuzwNrM',
+      },
+      {
+        id: 'ex-oct21-3',
+        name: 'Bulgarian Split Squat',
+        sets: 3,
+        reps: '8 / leg',
+        intensity: '30 lb DBs',
+        rest: '90 sec',
+        notes: 'Slight forward torso lean to load glute and hamstring.',
+        completed: false,
+        category: 'Lower body',
+        youtubeId: '2C-uNgKwPLE',
+      },
+      {
+        id: 'ex-oct21-4',
+        name: 'Pallof Press',
+        sets: 3,
+        reps: '12 / side',
+        intensity: 'Medium Band',
+        rest: '45 sec',
+        notes: 'Brace core against rotational pull.',
+        completed: false,
+        category: 'Core',
+        youtubeId: 'AH_QZLm_0-s',
+      },
+    ],
   },
   {
     date: '2026-10-22',
     dayOfWeek: 'Thu',
     dayNumber: 22,
     fullDayName: 'Thursday, October 22',
-    focus: 'Lower body tempo',
-    exercises: [],
+    focus: 'Lower body tempo & Unilateral Control',
+    coachNotes: 'Tempo day: focus on joint position and smooth deceleration.',
+    exercises: [
+      {
+        id: 'ex-oct22-1',
+        name: 'Goblet Squat',
+        sets: 3,
+        reps: '10',
+        intensity: '35 lb',
+        rest: '75 sec',
+        notes: '3-1-1 tempo. Elbows inside knees at bottom.',
+        completed: false,
+        category: 'Lower body',
+        youtubeId: 'MeIiIdhvXT4',
+      },
+      {
+        id: 'ex-oct22-2',
+        name: 'Single-leg Romanian Deadlift (RDL)',
+        sets: 3,
+        reps: '8 / leg',
+        intensity: '35 lb',
+        rest: '75 sec',
+        notes: 'Hinge cleanly from hips without pelvic rotation.',
+        completed: false,
+        category: 'Lower body',
+        youtubeId: 'iH4Q5dYpB1E',
+      },
+    ],
   },
   {
     date: '2026-10-23',
     dayOfWeek: 'Fri',
     dayNumber: 23,
     fullDayName: 'Friday, October 23',
-    focus: null,
-    exercises: [],
+    focus: 'Upper Body Push/Pull & Core',
+    exercises: [
+      {
+        id: 'ex-oct23-1',
+        name: 'Dumbbell Bench Press',
+        sets: 4,
+        reps: '8',
+        intensity: '55 lb',
+        rest: '90 sec',
+        notes: 'Retract scapulae firmly into bench.',
+        completed: false,
+        category: 'Upper body',
+        youtubeId: 'VmB1G1K7v94',
+      },
+      {
+        id: 'ex-oct23-2',
+        name: 'Strict Pull-Ups',
+        sets: 4,
+        reps: '6-8',
+        intensity: 'Bodyweight',
+        rest: '90 sec',
+        notes: 'Full dead hang to chest-to-bar.',
+        completed: false,
+        category: 'Upper body',
+        youtubeId: 'eGo4IYlbE5g',
+      },
+    ],
   },
   {
     date: '2026-10-24',
     dayOfWeek: 'Sat',
     dayNumber: 24,
     fullDayName: 'Saturday, October 24',
-    focus: 'Zone 2 cardio',
-    exercises: [],
+    focus: 'Zone 2 cardio & Loaded Carry',
+    exercises: [
+      {
+        id: 'ex-oct24-1',
+        name: 'Hardstyle Kettlebell Swings',
+        sets: 4,
+        reps: '15',
+        intensity: '24 kg',
+        rest: '60 sec',
+        notes: 'Explosive hip drive.',
+        completed: false,
+        category: 'Conditioning',
+        youtubeId: 'YSxHifyI608',
+      },
+    ],
   },
   {
     date: '2026-10-25',
@@ -594,7 +876,20 @@ export const INITIAL_OCTOBER_WORKOUTS: DayWorkout[] = [
     dayNumber: 26,
     fullDayName: 'Monday, October 26',
     focus: 'Deload upper',
-    exercises: [],
+    exercises: [
+      {
+        id: 'ex-oct26-1',
+        name: 'Incline Dumbbell Press',
+        sets: 3,
+        reps: '10',
+        intensity: '45 lb',
+        rest: '90 sec',
+        notes: 'Smooth deload tempo, leave 3 reps in reserve.',
+        completed: false,
+        category: 'Upper body',
+        youtubeId: '8iPEnn-ltC8',
+      },
+    ],
   },
   {
     date: '2026-10-27',
@@ -609,8 +904,21 @@ export const INITIAL_OCTOBER_WORKOUTS: DayWorkout[] = [
     dayOfWeek: 'Wed',
     dayNumber: 28,
     fullDayName: 'Wednesday, October 28',
-    focus: null,
-    exercises: [],
+    focus: 'Deload lower & Mobility',
+    exercises: [
+      {
+        id: 'ex-oct28-1',
+        name: 'Goblet Squat',
+        sets: 3,
+        reps: '8',
+        intensity: '30 lb',
+        rest: '75 sec',
+        notes: 'Deload week — focus on speed and crisp technique.',
+        completed: false,
+        category: 'Lower body',
+        youtubeId: 'MeIiIdhvXT4',
+      },
+    ],
   },
   {
     date: '2026-10-29',
@@ -618,7 +926,20 @@ export const INITIAL_OCTOBER_WORKOUTS: DayWorkout[] = [
     dayNumber: 29,
     fullDayName: 'Thursday, October 29',
     focus: 'Deload lower',
-    exercises: [],
+    exercises: [
+      {
+        id: 'ex-oct29-1',
+        name: "World's Greatest Stretch",
+        sets: 3,
+        reps: '5 / side',
+        intensity: 'Bodyweight',
+        rest: '30 sec',
+        notes: 'Thoracic rotation and hip flexor opener.',
+        completed: false,
+        category: 'Mobility',
+        youtubeId: '2fBf_yB4xQc',
+      },
+    ],
   },
   {
     date: '2026-10-30',
@@ -633,8 +954,21 @@ export const INITIAL_OCTOBER_WORKOUTS: DayWorkout[] = [
     dayOfWeek: 'Sat',
     dayNumber: 31,
     fullDayName: 'Saturday, October 31',
-    focus: 'Mobility & tests',
-    exercises: [],
+    focus: 'Mobility & Block II Re-Assessment',
+    exercises: [
+      {
+        id: 'ex-oct31-1',
+        name: '90/90 breathing',
+        sets: 2,
+        reps: '5 breaths',
+        intensity: 'Bodyweight',
+        rest: '30 sec',
+        notes: 'Pre-test ribcage alignment.',
+        completed: false,
+        category: 'Mobility',
+        youtubeId: 'r6Zf4GZ0E0Q',
+      },
+    ],
   },
 ];
 
@@ -1201,36 +1535,80 @@ export function getClientInitialWorkouts(clientId: string): DayWorkout[] {
     },
   ];
 
-  // Specific day distributions per client to make schedules varied:
+  // Specific day distributions per client to make schedules varied across all weeks of the month:
+  let selectedFirstWeekDays: DayWorkout[];
   switch (clientId) {
     case 'sofia-chen':
-      // Exercises on Mon, Tue, Thu, Fri (today)
-      return baseDays.filter((d) => ['2026-10-05', '2026-10-06', '2026-10-08', '2026-10-09'].includes(d.date));
+      selectedFirstWeekDays = baseDays.filter((d) =>
+        ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09'].includes(d.date)
+      );
+      break;
     case 'marcus-vance':
-      // Exercises on Tue, Thu, Sat
-      return baseDays.filter((d) => ['2026-10-06', '2026-10-08', '2026-10-10'].includes(d.date));
+      selectedFirstWeekDays = baseDays.filter((d) =>
+        ['2026-10-06', '2026-10-07', '2026-10-08', '2026-10-10'].includes(d.date)
+      );
+      break;
     case 'david-miller':
-      // Exercises on Mon, Wed, Fri (today)
-      return baseDays.filter((d) => ['2026-10-05', '2026-10-07', '2026-10-09'].includes(d.date));
+      selectedFirstWeekDays = baseDays.filter((d) =>
+        ['2026-10-05', '2026-10-07', '2026-10-09', '2026-10-10'].includes(d.date)
+      );
+      break;
     case 'elena-rostova':
-      // Exercises on Tue, Fri (today), Sat
-      return baseDays.filter((d) => ['2026-10-06', '2026-10-09', '2026-10-10'].includes(d.date));
+      selectedFirstWeekDays = baseDays.filter((d) =>
+        ['2026-10-06', '2026-10-07', '2026-10-09', '2026-10-10'].includes(d.date)
+      );
+      break;
     case 'liam-oconnor':
-      // Exercises on Mon, Thu, Sat
-      return baseDays.filter((d) => ['2026-10-05', '2026-10-08', '2026-10-10'].includes(d.date));
+      selectedFirstWeekDays = baseDays.filter((d) =>
+        ['2026-10-05', '2026-10-07', '2026-10-08', '2026-10-10'].includes(d.date)
+      );
+      break;
     case 'maya-patel':
-      // Exercises on Wed, Fri (today)
-      return baseDays.filter((d) => ['2026-10-07', '2026-10-09'].includes(d.date));
+      selectedFirstWeekDays = baseDays.filter((d) =>
+        ['2026-10-05', '2026-10-07', '2026-10-09'].includes(d.date)
+      );
+      break;
     case 'jordan-hayes':
-      // Deload client: Exercises on Tue, Thu
-      return baseDays.filter((d) => ['2026-10-06', '2026-10-08'].includes(d.date));
+      selectedFirstWeekDays = baseDays.filter((d) =>
+        ['2026-10-06', '2026-10-07', '2026-10-08'].includes(d.date)
+      );
+      break;
     case 'lucas-silva':
-      // Exercises on Mon, Wed, Fri (today), Sat
-      return baseDays.filter((d) => ['2026-10-05', '2026-10-07', '2026-10-09', '2026-10-10'].includes(d.date));
+      selectedFirstWeekDays = baseDays.filter((d) =>
+        ['2026-10-05', '2026-10-07', '2026-10-09', '2026-10-10'].includes(d.date)
+      );
+      break;
     case 'chloe-dupont':
-      // Exercises on Tue, Thu, Sun
-      return baseDays.filter((d) => ['2026-10-06', '2026-10-08', '2026-10-11'].includes(d.date));
+      selectedFirstWeekDays = baseDays.filter((d) =>
+        ['2026-10-06', '2026-10-07', '2026-10-08', '2026-10-10'].includes(d.date)
+      );
+      break;
     default:
-      return baseDays;
+      selectedFirstWeekDays = baseDays;
   }
+
+  // Replicate weekly microcycle across all 4 weeks of October (weeks +0, +7, +14, +21 days)
+  const fullMonthSchedule: DayWorkout[] = [];
+  for (const weekOffset of [0, 7, 14, 21]) {
+    for (const day of selectedFirstWeekDays) {
+      const newDayNum = day.dayNumber + weekOffset;
+      if (newDayNum <= 31) {
+        const dateStr = `2026-10-${String(newDayNum).padStart(2, '0')}`;
+        const weekdayFull = day.fullDayName.split(',')[0];
+        fullMonthSchedule.push({
+          ...day,
+          date: dateStr,
+          dayNumber: newDayNum,
+          fullDayName: `${weekdayFull}, October ${newDayNum}`,
+          exercises: day.exercises.map((ex, i) => ({
+            ...ex,
+            id: `${ex.id}-w${weekOffset}-${i}`,
+            completed: newDayNum < 21,
+          })),
+        });
+      }
+    }
+  }
+
+  return fullMonthSchedule;
 }

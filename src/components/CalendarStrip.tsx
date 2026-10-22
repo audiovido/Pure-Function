@@ -12,6 +12,8 @@ import {
   getWeekDays,
   formatWeekRangeHeader,
   shiftDateByWeeks,
+  shiftDateByMonths,
+  getMonthCalendarData,
 } from '../utils/dateUtils';
 
 export interface CalendarStripProps {
@@ -44,23 +46,28 @@ export const CalendarStrip: React.FC<CalendarStripProps> = ({
 
   const weekDays = getWeekDays(viewWeekDate);
   const weekRangeTitle = formatWeekRangeHeader(weekDays);
+  const monthData = getMonthCalendarData(viewWeekDate);
 
-  const handlePrevWeek = () => {
-    setViewWeekDate((prev) => shiftDateByWeeks(prev, -1));
+  const handlePrev = () => {
+    if (calendarMode === 'week') {
+      setViewWeekDate((prev) => shiftDateByWeeks(prev, -1));
+    } else {
+      setViewWeekDate((prev) => shiftDateByMonths(prev, -1));
+    }
   };
 
-  const handleNextWeek = () => {
-    setViewWeekDate((prev) => shiftDateByWeeks(prev, 1));
+  const handleNext = () => {
+    if (calendarMode === 'week') {
+      setViewWeekDate((prev) => shiftDateByWeeks(prev, 1));
+    } else {
+      setViewWeekDate((prev) => shiftDateByMonths(prev, 1));
+    }
   };
 
   const handleGoToToday = () => {
     setViewWeekDate(todayStr);
     onSelectDate(todayStr);
   };
-
-  // Month Calendar data (October 2026 starts on Thursday)
-  const leadBlanks = [null, null, null];
-  const daysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
 
   return (
     <section className={`space-y-3 pb-1 ${className}`}>
@@ -69,40 +76,51 @@ export const CalendarStrip: React.FC<CalendarStripProps> = ({
         {/* Left: Date title and Prev/Next controls */}
         <div className="flex items-center gap-2 flex-wrap">
           <CalendarIcon className="w-4 h-4 text-amber-500 shrink-0" />
-          <h3 className="text-xs sm:text-sm font-bold tracking-tight">
-            {calendarMode === 'week' ? weekRangeTitle : 'October 2026'}
+          <h3 className="text-xs sm:text-sm font-bold tracking-tight tabular-nums">
+            {calendarMode === 'week' ? weekRangeTitle : monthData.monthTitle}
           </h3>
 
-          {calendarMode === 'week' && (
-            <div className="flex items-center gap-0.5 ml-1">
+          <div className="flex items-center gap-0.5 ml-1">
+            <button
+              type="button"
+              onClick={handlePrev}
+              title={calendarMode === 'week' ? 'Previous Week' : 'Previous Month'}
+              aria-label={calendarMode === 'week' ? 'Previous Week' : 'Previous Month'}
+              className={`p-1 rounded-lg transition-colors cursor-pointer ${
+                isDark
+                  ? 'hover:bg-neutral-800 text-neutral-400 hover:text-white'
+                  : 'hover:bg-neutral-200 text-neutral-600 hover:text-black'
+              }`}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              title={calendarMode === 'week' ? 'Next Week' : 'Next Month'}
+              aria-label={calendarMode === 'week' ? 'Next Week' : 'Next Month'}
+              className={`p-1 rounded-lg transition-colors cursor-pointer ${
+                isDark
+                  ? 'hover:bg-neutral-800 text-neutral-400 hover:text-white'
+                  : 'hover:bg-neutral-200 text-neutral-600 hover:text-black'
+              }`}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            {selectedDate !== todayStr && (
               <button
                 type="button"
-                onClick={handlePrevWeek}
-                title="Previous Week"
-                aria-label="Previous Week"
-                className={`p-1 rounded-lg transition-colors cursor-pointer ${
+                onClick={handleGoToToday}
+                className={`ml-1 px-2 py-0.5 rounded-md text-[10px] font-bold transition-colors cursor-pointer ${
                   isDark
-                    ? 'hover:bg-neutral-800 text-neutral-400 hover:text-white'
-                    : 'hover:bg-neutral-200 text-neutral-600 hover:text-black'
+                    ? 'bg-neutral-800/90 hover:bg-neutral-700 text-amber-400'
+                    : 'bg-neutral-200/80 hover:bg-neutral-300 text-neutral-800'
                 }`}
               >
-                <ChevronLeft className="w-4 h-4" />
+                Today
               </button>
-              <button
-                type="button"
-                onClick={handleNextWeek}
-                title="Next Week"
-                aria-label="Next Week"
-                className={`p-1 rounded-lg transition-colors cursor-pointer ${
-                  isDark
-                    ? 'hover:bg-neutral-800 text-neutral-400 hover:text-white'
-                    : 'hover:bg-neutral-200 text-neutral-600 hover:text-black'
-                }`}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Right: Weekly View & Monthly View Toggle Buttons */}
@@ -116,7 +134,7 @@ export const CalendarStrip: React.FC<CalendarStripProps> = ({
           <button
             type="button"
             onClick={() => setCalendarMode('week')}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
               calendarMode === 'week'
                 ? 'bg-amber-400 text-black shadow-sm font-bold'
                 : isDark
@@ -130,7 +148,7 @@ export const CalendarStrip: React.FC<CalendarStripProps> = ({
           <button
             type="button"
             onClick={() => setCalendarMode('month')}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
               calendarMode === 'month'
                 ? 'bg-amber-400 text-black shadow-sm font-bold'
                 : isDark
@@ -153,6 +171,10 @@ export const CalendarStrip: React.FC<CalendarStripProps> = ({
             const dayWorkout = workouts.find((w) => w.date === day.date);
             const exerciseCount = dayWorkout?.exercises?.length || 0;
             const hasExercises = exerciseCount > 0;
+            const allCompleted =
+              hasExercises &&
+              (dayWorkout?.sessionCompleted ||
+                dayWorkout?.exercises.every((e) => e.completed));
 
             return (
               <button
@@ -179,16 +201,20 @@ export const CalendarStrip: React.FC<CalendarStripProps> = ({
                   {day.dayOfWeek}
                 </span>
 
-                <span className="text-sm sm:text-base font-bold my-1 leading-none">
+                <span className="text-sm sm:text-base font-bold my-1 leading-none tabular-nums">
                   {day.dayNumber}
                 </span>
 
-                {/* Status Dot: subtle dot indicating workout scheduled on this day */}
+                {/* Status Indicator */}
                 <div className="h-1.5 flex items-center justify-center">
                   {hasExercises ? (
                     <span
                       className={`w-1.5 h-1.5 rounded-full ${
-                        isSelected ? 'bg-black' : 'bg-amber-500'
+                        isSelected
+                          ? 'bg-black'
+                          : allCompleted
+                          ? 'bg-emerald-400'
+                          : 'bg-amber-500'
                       }`}
                     />
                   ) : (
@@ -201,7 +227,7 @@ export const CalendarStrip: React.FC<CalendarStripProps> = ({
         </div>
       )}
 
-      {/* VIEW 2: 31-Day Month Calendar Grid */}
+      {/* VIEW 2: Dynamic Month Calendar Grid */}
       {calendarMode === 'month' && (
         <div
           className={`p-3 sm:p-4 rounded-xl border space-y-2.5 ${
@@ -222,24 +248,27 @@ export const CalendarStrip: React.FC<CalendarStripProps> = ({
               </div>
             ))}
 
-            {leadBlanks.map((_, i) => (
+            {Array.from({ length: monthData.leadBlanksCount }).map((_, i) => (
               <div key={`b-${i}`} className="p-1 min-h-[38px]" />
             ))}
 
-            {daysInMonth.map((dayNum) => {
-              const dateStr = `2026-10-${String(dayNum).padStart(2, '0')}`;
+            {monthData.days.map(({ dayNum, dateStr }) => {
               const isSelected = dateStr === selectedDate;
               const isToday = dateStr === todayStr;
               const dayWorkout = workouts.find((w) => w.date === dateStr);
               const hasWorkout =
                 dayWorkout && dayWorkout.exercises && dayWorkout.exercises.length > 0;
+              const allCompleted =
+                hasWorkout &&
+                (dayWorkout?.sessionCompleted ||
+                  dayWorkout?.exercises.every((e) => e.completed));
 
               return (
                 <button
-                  key={dayNum}
+                  key={dateStr}
                   type="button"
                   onClick={() => onSelectDate(dateStr)}
-                  className={`p-1 rounded-lg text-xs font-semibold flex flex-col items-center justify-center min-h-[38px] transition-all cursor-pointer relative ${
+                  className={`p-1 rounded-lg text-xs font-semibold flex flex-col items-center justify-center min-h-[38px] transition-all cursor-pointer relative tabular-nums ${
                     isSelected
                       ? 'bg-amber-400 text-black font-extrabold shadow-sm'
                       : isToday
@@ -262,7 +291,11 @@ export const CalendarStrip: React.FC<CalendarStripProps> = ({
                   {hasWorkout && (
                     <span
                       className={`w-1 h-1 rounded-full ${
-                        isSelected ? 'bg-black' : 'bg-amber-400'
+                        isSelected
+                          ? 'bg-black'
+                          : allCompleted
+                          ? 'bg-emerald-400'
+                          : 'bg-amber-400'
                       }`}
                     />
                   )}

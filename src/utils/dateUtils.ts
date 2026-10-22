@@ -139,6 +139,48 @@ export function shiftDateByWeeks(dateStr: string, weeksDelta: number): string {
 }
 
 /**
+ * Shifts a date by a number of months (+1 for next month, -1 for previous month)
+ */
+export function shiftDateByMonths(dateStr: string, monthsDelta: number): string {
+  const d = parseDateKey(dateStr);
+  d.setMonth(d.getMonth() + monthsDelta, 1);
+  return formatDateKey(d);
+}
+
+/**
+ * Returns dynamic month grid metadata (Monday-first lead blanks and days list)
+ */
+export function getMonthCalendarData(referenceDateStr: string): {
+  monthTitle: string;
+  leadBlanksCount: number;
+  days: { dayNum: number; dateStr: string }[];
+} {
+  const d = parseDateKey(referenceDateStr);
+  const year = d.getFullYear();
+  const monthIndex = d.getMonth();
+  const monthName = MONTH_NAMES[monthIndex];
+
+  const firstDayOfMonth = new Date(year, monthIndex, 1);
+  const firstWeekday = firstDayOfMonth.getDay(); // 0=Sun, 1=Mon...
+  const leadBlanksCount = firstWeekday === 0 ? 6 : firstWeekday - 1;
+
+  const lastDayOfMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const days = Array.from({ length: lastDayOfMonth }, (_, idx) => {
+    const dayNum = idx + 1;
+    const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(
+      dayNum
+    ).padStart(2, '0')}`;
+    return { dayNum, dateStr };
+  });
+
+  return {
+    monthTitle: `${monthName} ${year}`,
+    leadBlanksCount,
+    days,
+  };
+}
+
+/**
  * Creates or retrieves a DayWorkout object for a given date
  */
 export function getOrCreateDayWorkout(

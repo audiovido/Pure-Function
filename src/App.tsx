@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  INITIAL_CLIENTS,
   INITIAL_OCTOBER_WORKOUTS,
   getClientInitialWorkouts,
 } from './data/initialData';
@@ -15,65 +14,85 @@ import {
 } from './utils/dateUtils';
 import {
   AppViewMode,
+  AuthAccount,
+  ClientHomework,
   ClientProfile,
+  DailyNutritionEntry,
   DayWorkout,
+  DirectMessage,
   Exercise,
+  MacroTargets,
+  ProgramBlock,
   ThemeMode,
 } from './types';
+import {
+  loadActiveSession,
+  saveActiveSession,
+  loadAccounts,
+  saveAccounts,
+  loadClients,
+  saveClients,
+  loadWorkoutsMap,
+  saveWorkoutsMap,
+  loadNutritionMap,
+  saveNutritionMap,
+  loadMessagesMap,
+  saveMessagesMap,
+} from './services/storageService';
 import { PureFunctionLogo } from './components/PureFunctionLogo';
-import { TrainerView } from './components/TrainerView';
-import { ClientView } from './components/ClientView';
+import { AuthScreen } from './components/AuthScreen';
+import { TrainerView, TrainerBottomTab } from './components/TrainerView';
+import { ClientView, ClientBottomTab } from './components/ClientView';
 import { VideoPlayerModal } from './components/VideoPlayerModal';
 import { AddExerciseModal } from './components/AddExerciseModal';
 import { AssessmentsModal } from './components/AssessmentsModal';
 import { LibraryModal } from './components/LibraryModal';
 import { ProgramsModal } from './components/ProgramsModal';
 import { ClientManagerModal } from './components/ClientManagerModal';
-import {
-  UserCheck,
-  User,
-  ClipboardCheck,
-  Sun,
-  Moon,
-  Users,
-} from 'lucide-react';
 
 export default function App() {
-  const [viewMode, setViewMode] = useState<AppViewMode>('trainer');
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('pure_theme');
-    return saved === 'light' || saved === 'dark' ? saved : 'dark';
+  const [theme] = useState<ThemeMode>('light');
+
+  const [clients, setClients] = useState<ClientProfile[]>(() => loadClients());
+  const [accounts, setAccounts] = useState<AuthAccount[]>(() =>
+    loadAccounts(loadClients())
+  );
+
+  // Authentication Session (Trainer or Client)
+  const [activeAccount, setActiveAccount] = useState<AuthAccount | null>(() =>
+    loadActiveSession()
+  );
+
+  const [viewMode, setViewMode] = useState<AppViewMode>(() => {
+    const session = loadActiveSession();
+    return session?.role === 'client' ? 'client' : 'trainer';
   });
 
-  const [clients, setClients] = useState<ClientProfile[]>(INITIAL_CLIENTS);
-  const [selectedClientId, setSelectedClientId] = useState<string>('alex-morgan');
+  const [trainerBottomTab, setTrainerBottomTab] =
+    useState<TrainerBottomTab>('dashboard');
+  const [clientBottomTab, setClientBottomTab] =
+    useState<ClientBottomTab>('today');
 
-  // Maintain workouts per client so switching athletes displays their own real schedule
+  const [selectedClientId, setSelectedClientId] = useState<string>(() => {
+    const session = loadActiveSession();
+    if (session?.role === 'client' && session.clientId) {
+      return session.clientId;
+    }
+    return 'alex-morgan';
+  });
+
+  // Persistent maps per client
   const [clientWorkoutsMap, setClientWorkoutsMap] = useState<
     Record<string, DayWorkout[]>
-  >(() => {
-    const map: Record<string, DayWorkout[]> = {};
-    INITIAL_CLIENTS.forEach((c) => {
-      map[c.id] = getClientInitialWorkouts(c.id);
-    });
-    return map;
-  });
+  >(() => loadWorkoutsMap(loadClients()));
 
-  const workouts =
-    clientWorkoutsMap[selectedClientId] || INITIAL_OCTOBER_WORKOUTS;
+  const [nutritionMap, setNutritionMap] = useState<
+    Record<string, Record<string, DailyNutritionEntry>>
+  >(() => loadNutritionMap(loadClients()));
 
-  const setWorkouts = (
-    updater: DayWorkout[] | ((prev: DayWorkout[]) => DayWorkout[])
-  ) => {
-    setClientWorkoutsMap((prev) => {
-      const current = prev[selectedClientId] || INITIAL_OCTOBER_WORKOUTS;
-      const next = typeof updater === 'function' ? updater(current) : updater;
-      return {
-        ...prev,
-        [selectedClientId]: next,
-      };
-    });
-  };
+  const [messagesMap, setMessagesMap] = useState<
+    Record<string, DirectMessage[]>
+  >(() => loadMessagesMap(loadClients()));
 
   const [selectedDate, setSelectedDate] = useState<string>(() =>
     getTodayDateString()
@@ -88,21 +107,129 @@ export default function App() {
   const [isProgramsOpen, setIsProgramsOpen] = useState<boolean>(false);
   const [isClientManagerOpen, setIsClientManagerOpen] = useState<boolean>(false);
 
+  // Sync theme to localStorage
   useEffect(() => {
     localStorage.setItem('pure_theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  // Sync persistent stores to localStorage
+  useEffect(() => {
+    saveClients(clients);
+  }, [clients]);
+
+  useEffect(() => {
+    saveAccounts(accounts);
+  }, [accounts]);
+
+  useEffect(() => {
+    saveWorkoutsMap(clientWorkoutsMap);
+  }, [clientWorkoutsMap]);
+
+  useEffect(() => {
+    saveNutritionMap(nutritionMap);
+  }, [nutritionMap]);
+
+  useEffect(() => {
+    saveMessagesMap(messagesMap);
+  }, [messagesMap]);
+
+  // Sign In Handler
+  const handleAuthenticated = (account: AuthAccount) => {
+    setActiveAccount(account);
+    saveActiveSession(account);
+
+    if (account.role === 'client') {
+      setViewMode('client');
+      if (account.clientId) {
+        setSelectedClientId(account.clientId);
+      }
+    } else {
+      setViewMode('trainer');
+    }
   };
 
-  const currentClient =
-    clients.find((c) => c.id === selectedClientId) || clients[0];
+  // Register New Account (Trainer or Client)
+  const handleRegisterAccount = (
+    newAccount: AuthAccount,
+    newClientProfile?: ClientProfile
+  ) => {
+    setAccounts((prev) => [...prev, newAccount]);
 
-  // Handler: Add client to roster
+    if (newClientProfile) {
+      setClients((prev) => [newClientProfile, ...prev]);
+      setClientWorkoutsMap((prev) => ({
+        ...prev,
+        [newClientProfile.id]: getClientInitialWorkouts(newClientProfile.id),
+      }));
+    }
+
+    handleAuthenticated(newAccount);
+  };
+
+  // Sign Out Handler
+  const handleSignOut = () => {
+    setActiveAccount(null);
+    saveActiveSession(null);
+  };
+
+  const effectiveClientId =
+    activeAccount?.role === 'client' && activeAccount.clientId
+      ? activeAccount.clientId
+      : selectedClientId;
+
+  const currentClient =
+    clients.find((c) => c.id === effectiveClientId) || clients[0];
+
+  const workouts =
+    clientWorkoutsMap[effectiveClientId] || INITIAL_OCTOBER_WORKOUTS;
+
+  const setWorkouts = (
+    updater: DayWorkout[] | ((prev: DayWorkout[]) => DayWorkout[])
+  ) => {
+    setClientWorkoutsMap((prev) => {
+      const current = prev[effectiveClientId] || INITIAL_OCTOBER_WORKOUTS;
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      return {
+        ...prev,
+        [effectiveClientId]: next,
+      };
+    });
+  };
+
+  const clientNutritionForDate =
+    nutritionMap[effectiveClientId]?.[selectedDate];
+  const clientMessages = messagesMap[effectiveClientId] || [];
+
+  // Handler: Add client to roster (and create matching Client login account)
   const handleAddClient = (newClient: ClientProfile) => {
     setClients((prev) => [newClient, ...prev]);
+    setClientWorkoutsMap((prev) => ({
+      ...prev,
+      [newClient.id]: getClientInitialWorkouts(newClient.id),
+    }));
     setSelectedClientId(newClient.id);
+
+    if (newClient.username) {
+      const normalizedUsername = newClient.username.toLowerCase();
+      setAccounts((prev) => {
+        if (
+          prev.some((a) => a.username.toLowerCase() === normalizedUsername)
+        ) {
+          return prev;
+        }
+        const newAccount: AuthAccount = {
+          id: `user-${newClient.id}`,
+          username: normalizedUsername,
+          password: newClient.password || 'client123',
+          role: 'client',
+          displayName: newClient.name,
+          email: newClient.email,
+          clientId: newClient.id,
+          title: newClient.goal,
+        };
+        return [...prev, newAccount];
+      });
+    }
   };
 
   // Handler: Delete client from roster
@@ -126,6 +253,53 @@ export default function App() {
             exercises: day.exercises.map((ex) =>
               ex.id === exerciseId ? { ...ex, completed: !ex.completed } : ex
             ),
+          };
+        }
+        return day;
+      })
+    );
+  };
+
+  // Handler: Client logs actual weight, reps, sets, RPE, notes for an exercise
+  const handleLogExerciseResult = (
+    date: string,
+    exerciseId: string,
+    updates: Partial<Exercise>
+  ) => {
+    setWorkouts((prev) =>
+      prev.map((day) => {
+        if (day.date === date) {
+          return {
+            ...day,
+            exercises: day.exercises.map((ex) =>
+              ex.id === exerciseId ? { ...ex, ...updates } : ex
+            ),
+          };
+        }
+        return day;
+      })
+    );
+  };
+
+  // Handler: Client completes daily workout session check-in
+  const handleCompleteSession = (
+    date: string,
+    summary: {
+      sessionCompleted: boolean;
+      sessionDurationMinutes?: number;
+      sessionRpe?: number;
+      clientSessionFeedback?: string;
+    }
+  ) => {
+    setWorkouts((prev) =>
+      prev.map((day) => {
+        if (day.date === date) {
+          return {
+            ...day,
+            ...summary,
+            exercises: summary.sessionCompleted
+              ? day.exercises.map((ex) => ({ ...ex, completed: true }))
+              : day.exercises,
           };
         }
         return day;
@@ -214,165 +388,248 @@ export default function App() {
     handleAddExercise(duplicated);
   };
 
+  // Handler: Update Daily Nutrition Log
+  const handleUpdateDailyNutrition = (entry: DailyNutritionEntry) => {
+    setNutritionMap((prev) => ({
+      ...prev,
+      [effectiveClientId]: {
+        ...(prev[effectiveClientId] || {}),
+        [entry.date]: entry,
+      },
+    }));
+  };
+
+  // Handler: Coach updates Macro Targets
+  const handleUpdateMacroTargets = (targets: MacroTargets) => {
+    setClients((prev) =>
+      prev.map((c) =>
+        c.id === effectiveClientId ? { ...c, macroTargets: targets } : c
+      )
+    );
+  };
+
+  // Handler: Update Daily Homework Habits
+  const handleUpdateHomework = (homework: ClientHomework[]) => {
+    setClients((prev) =>
+      prev.map((c) => (c.id === effectiveClientId ? { ...c, homework } : c))
+    );
+  };
+
+  // Handler: Send Direct Message (or Broadcast to all clients)
+  const handleSendMessage = (
+    text: string,
+    options?: {
+      videoUrl?: string;
+      exerciseTag?: string;
+      broadcastAll?: boolean;
+    }
+  ) => {
+    const senderRole = activeAccount?.role === 'client' ? 'client' : viewMode;
+    const senderName =
+      senderRole === 'trainer'
+        ? activeAccount?.displayName || currentClient.coach
+        : currentClient.name;
+
+    const timestampLabel = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    if (options?.broadcastAll && senderRole === 'trainer') {
+      setMessagesMap((prev) => {
+        const next = { ...prev };
+        clients.forEach((c) => {
+          const msg: DirectMessage = {
+            id: `msg-${Date.now()}-${c.id}`,
+            clientId: c.id,
+            senderRole: 'trainer',
+            senderName,
+            text,
+            timestamp: `Today · ${timestampLabel}`,
+            exerciseTag: options.exerciseTag,
+            videoUrl: options.videoUrl,
+            isBroadcast: true,
+          };
+          next[c.id] = [...(next[c.id] || []), msg];
+        });
+        return next;
+      });
+      return;
+    }
+
+    const newMsg: DirectMessage = {
+      id: `msg-${Date.now()}`,
+      clientId: effectiveClientId,
+      senderRole,
+      senderName,
+      text,
+      timestamp: `Today · ${timestampLabel}`,
+      exerciseTag: options?.exerciseTag,
+      videoUrl: options?.videoUrl,
+    };
+
+    setMessagesMap((prev) => ({
+      ...prev,
+      [effectiveClientId]: [...(prev[effectiveClientId] || []), newMsg],
+    }));
+  };
+
+  // Handler: Update Periodized Programs
+  const handleUpdatePrograms = (
+    updatedBlocks: ProgramBlock[],
+    activeProgramTitle: string
+  ) => {
+    setClients((prev) =>
+      prev.map((c) =>
+        c.id === effectiveClientId
+          ? {
+              ...c,
+              programBlocks: updatedBlocks,
+              currentProgram: activeProgramTitle || c.currentProgram,
+            }
+          : c
+      )
+    );
+  };
+
+  // If not signed in, show the dedicated TrueCoach Role-Based Sign-In Screen first
+  if (!activeAccount) {
+    return (
+      <AuthScreen
+        accounts={accounts}
+        clients={clients}
+        onAuthenticated={handleAuthenticated}
+        onRegisterAccount={handleRegisterAccount}
+        theme={theme}
+      />
+    );
+  }
+
   const isDark = theme === 'dark';
+  const isTrainerAccount = activeAccount.role === 'trainer';
+
+  const sectionTitleMap: Record<TrainerBottomTab, string> = {
+    dashboard: 'Dashboard',
+    clients: 'Clients',
+    activity: 'Activity',
+    messages: 'Messages',
+    account: 'Account',
+  };
+
+  const clientSectionTitleMap: Record<ClientBottomTab, string> = {
+    today: 'Today',
+    workouts: 'Workouts',
+    habits: 'Habits',
+    messages: 'Messages',
+    account: 'Account',
+  };
+
+  const activeHeaderTitle =
+    isTrainerAccount && viewMode === 'trainer'
+      ? sectionTitleMap[trainerBottomTab]
+      : clientSectionTitleMap[clientBottomTab];
 
   return (
     <div
       className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
         isDark
           ? 'bg-[#090b0e] text-slate-100'
-          : 'bg-[#f8f9fa] text-neutral-900'
+          : 'bg-white text-neutral-900'
       }`}
     >
       {/* 
         HEADER:
-        1. Left: Pure Function logo
-        2. Right: Trainer & Client buttons + Light/Night mode toggle nicely side-by-side
+        Black background so Pure Function logo is White & Yellow,
+        with a Yellow box and centered Black text showing the current section
+        (Dashboard, Clients, Activity, Messages, Account)
       */}
-      <header
-        className={`sticky top-0 z-40 backdrop-blur-md border-b px-3 sm:px-6 py-2 sm:py-2.5 transition-colors duration-200 ${
-          isDark
-            ? 'bg-[#0d0f14]/90 border-neutral-800/80 shadow-md'
-            : 'bg-white/90 border-neutral-200 shadow-sm'
-        }`}
-      >
-        <div className="max-w-6xl mx-auto flex items-center justify-between min-h-[38px] sm:min-h-[44px]">
-          {/* Top-Left: Pure Function Logo */}
+      <header className="sticky top-0 z-40 overflow-hidden bg-gradient-to-b from-[#2b303c] via-[#1d212b] to-[#14171f] border-b border-neutral-700/70 px-3 sm:px-6 py-2.5 shadow-[0_6px_18px_-4px_rgba(20,23,31,0.28),inset_0_1px_1px_rgba(255,255,255,0.14)]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.07] to-transparent" />
+        <div className="relative z-10 max-w-6xl mx-auto flex items-center justify-between min-h-[38px] sm:min-h-[44px]">
+          {/* Left: Pure Function Logo in White & Yellow */}
           <div className="flex items-center py-0.5">
             <PureFunctionLogo
-              theme={theme}
+              theme="dark"
               className="h-8 sm:h-9 md:h-10"
             />
           </div>
 
-          {/* Top-Right: Trainer & Client Buttons + High-Contrast Mode Toggle Side-by-Side */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <nav
-              aria-label="View selection"
-              className="flex items-center gap-1.5 sm:gap-2"
-            >
-              {/* Trainer Squircle Button with Label */}
-              <button
-                type="button"
-                onClick={() => setViewMode('trainer')}
-                title="Trainer / Coach View"
-                aria-label="Switch to Trainer View"
-                className={`px-2.5 py-1 sm:px-3 sm:py-1.5 min-w-[46px] sm:min-w-[52px] rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer ${
-                  viewMode === 'trainer'
-                    ? 'bg-amber-400 text-black shadow-md ring-1 ring-amber-400/50 font-black scale-[1.02]'
-                    : isDark
-                    ? 'bg-[#131720]/80 hover:bg-[#1b202c] text-neutral-400 hover:text-white border border-neutral-800/90'
-                    : 'bg-slate-100 hover:bg-neutral-200 text-neutral-600 hover:text-black border border-neutral-300'
-                }`}
-              >
-                <ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                <span className="text-[9px] sm:text-[10px] font-bold tracking-tight uppercase leading-none mt-0.5">
-                  Trainer
-                </span>
-              </button>
-
-              {/* Client Squircle Button with Label */}
-              <button
-                type="button"
-                onClick={() => setViewMode('client')}
-                title="Client / Athlete View"
-                aria-label="Switch to Client View"
-                className={`px-2.5 py-1 sm:px-3 sm:py-1.5 min-w-[46px] sm:min-w-[52px] rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer ${
-                  viewMode === 'client'
-                    ? 'bg-amber-400 text-black shadow-md ring-1 ring-amber-400/50 font-black scale-[1.02]'
-                    : isDark
-                    ? 'bg-[#131720]/80 hover:bg-[#1b202c] text-neutral-400 hover:text-white border border-neutral-800/90'
-                    : 'bg-slate-100 hover:bg-neutral-200 text-neutral-600 hover:text-black border border-neutral-300'
-                }`}
-              >
-                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                <span className="text-[9px] sm:text-[10px] font-bold tracking-tight uppercase leading-none mt-0.5">
-                  Client
-                </span>
-              </button>
-            </nav>
-
-            {/* Light/Night Toggle with Slender Moon / Mustard Sun */}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              title={isDark ? 'Switch to Light Mode' : 'Switch to Night Mode'}
-              aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Night Mode'}
-              className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md border ${
-                isDark
-                  ? 'bg-[#d8dce2] hover:bg-[#ccd1d8] text-[#c88d00] border-neutral-300 hover:scale-105 ring-1 ring-neutral-400/30'
-                  : 'bg-black text-[#c88d00] border-neutral-900 hover:scale-105 ring-1 ring-black/40'
-              }`}
-            >
-              {isDark ? (
-                <Sun className="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-[#c88d00] text-[#c88d00]" />
-              ) : (
-                <svg
-                  viewBox="0 0 24 24"
-                  className="w-4 h-4 sm:w-4.5 sm:h-4.5"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  {/* Slender delicate crescent moon */}
-                  <path
-                    d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-                    fill="#c88d00"
-                  />
-                </svg>
-              )}
-            </button>
+          {/* Right/Center: Yellow Box with Centered Black Font showing current section */}
+          <div className="px-4 py-1.5 min-w-[110px] sm:min-w-[124px] rounded-xl bg-amber-400 text-black font-black text-xs sm:text-sm tracking-tight flex items-center justify-center text-center shadow-sm">
+            {activeHeaderTitle}
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-3.5 sm:p-6 md:p-8 max-w-6xl mx-auto w-full">
-        {/* View Mode 1: Trainer View (TrueCoach Model) */}
-        {viewMode === 'trainer' && (
-          <div className="space-y-4">
-            <TrainerView
-              clients={clients}
-              selectedClientId={selectedClientId}
-              onSelectClient={setSelectedClientId}
-              onOpenClientManager={() => setIsClientManagerOpen(true)}
-              workouts={workouts}
-              selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
-              onOpenVideo={(ex) => setVideoExercise(ex)}
-              onAddExerciseClick={() => {
-                setEditingExercise(null);
-                setIsAddExerciseOpen(true);
-              }}
-              onEditExerciseClick={(ex) => {
-                setEditingExercise(ex);
-                setIsAddExerciseOpen(true);
-              }}
-              onUpdateExerciseInline={handleUpdateExerciseInline}
-              onDeleteExercise={handleDeleteExercise}
-              onDuplicateExercise={handleDuplicateExercise}
-              onSaveSession={() => {}}
-              onOpenAssessments={() => setIsAssessmentsOpen(true)}
-              onOpenLibrary={() => setIsLibraryOpen(true)}
-              onOpenPrograms={() => setIsProgramsOpen(true)}
-              theme={theme}
-            />
-          </div>
+      <main className="flex-1 p-3 sm:p-6 max-w-6xl mx-auto w-full">
+        {/* View Mode 1: Trainer View (TrueCoach Minimal Model) */}
+        {isTrainerAccount && viewMode === 'trainer' && (
+          <TrainerView
+            clients={clients}
+            selectedClientId={selectedClientId}
+            onSelectClient={setSelectedClientId}
+            onOpenClientManager={() => setIsClientManagerOpen(true)}
+            workouts={workouts}
+            allClientWorkouts={clientWorkoutsMap}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            onOpenVideo={(ex) => setVideoExercise(ex)}
+            onAddExerciseClick={() => {
+              setEditingExercise(null);
+              setIsAddExerciseOpen(true);
+            }}
+            onEditExerciseClick={(ex) => {
+              setEditingExercise(ex);
+              setIsAddExerciseOpen(true);
+            }}
+            onUpdateExerciseInline={handleUpdateExerciseInline}
+            onDeleteExercise={handleDeleteExercise}
+            onDuplicateExercise={handleDuplicateExercise}
+            onSaveSession={() => {
+              saveWorkoutsMap(clientWorkoutsMap);
+              saveClients(clients);
+            }}
+            onOpenAssessments={() => setIsAssessmentsOpen(true)}
+            onOpenLibrary={() => setIsLibraryOpen(true)}
+            onOpenPrograms={() => setIsProgramsOpen(true)}
+            dailyNutrition={clientNutritionForDate}
+            onUpdateDailyNutrition={handleUpdateDailyNutrition}
+            onUpdateMacroTargets={handleUpdateMacroTargets}
+            onUpdateHomework={handleUpdateHomework}
+            messages={clientMessages}
+            allClientMessages={messagesMap}
+            onSendMessage={handleSendMessage}
+            activeAccount={activeAccount}
+            onSignOut={handleSignOut}
+            activeBottomTab={trainerBottomTab}
+            onBottomTabChange={setTrainerBottomTab}
+            theme={theme}
+          />
         )}
 
-        {/* View Mode 2: Client View */}
-        {viewMode === 'client' && (
-          <div className="space-y-4">
-            <ClientView
-              client={currentClient}
-              workouts={workouts}
-              selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
-              onToggleExerciseDone={handleToggleExerciseDone}
-              onOpenVideo={(ex) => setVideoExercise(ex)}
-              onOpenAssessments={() => setIsAssessmentsOpen(true)}
-              theme={theme}
-            />
-          </div>
+        {/* View Mode 2: Client View (TrueCoach Athlete Minimal Model) */}
+        {(!isTrainerAccount || viewMode === 'client') && (
+          <ClientView
+            client={currentClient}
+            workouts={workouts}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            onToggleExerciseDone={handleToggleExerciseDone}
+            onLogExerciseResult={handleLogExerciseResult}
+            onCompleteSession={handleCompleteSession}
+            onOpenVideo={(ex) => setVideoExercise(ex)}
+            onOpenAssessments={() => setIsAssessmentsOpen(true)}
+            dailyNutrition={clientNutritionForDate}
+            onUpdateDailyNutrition={handleUpdateDailyNutrition}
+            onUpdateHomework={handleUpdateHomework}
+            messages={clientMessages}
+            onSendMessage={handleSendMessage}
+            onSignOut={handleSignOut}
+            activeBottomTab={clientBottomTab}
+            onBottomTabChange={setClientBottomTab}
+            theme={theme}
+          />
         )}
       </main>
 
@@ -437,6 +694,7 @@ export default function App() {
         <ProgramsModal
           client={currentClient}
           onClose={() => setIsProgramsOpen(false)}
+          onUpdatePrograms={handleUpdatePrograms}
           theme={theme}
         />
       )}
