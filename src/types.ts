@@ -112,6 +112,9 @@ export interface ClientHomework {
 export interface ClientProfile {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
+  clientType?: 'Remote' | 'Dual' | 'In-Person';
   age?: number;
   email: string;
   username?: string;
@@ -121,6 +124,22 @@ export interface ClientProfile {
   goal: string;
   coach: string;
   currentProgram: string;
+  location?: string;
+  timezone?: string;
+  heightFt?: string;
+  heightIn?: string;
+  weightLbs?: string;
+  countryCode?: string;
+  phone?: string;
+  birthday?: string;
+  unitPreference?: 'Imperial / US' | 'Metric system';
+  gender?: 'M' | 'F' | 'Non-binary' | 'Prefer not to say';
+  emailDailyWorkout?: boolean;
+  emailMissedWorkouts?: boolean;
+  compliance7d?: number;
+  compliance30d?: number;
+  compliance90d?: number;
+  archived?: boolean;
   assessments: AssessmentMetric[];
   homework: ClientHomework[];
   macroTargets?: MacroTargets;

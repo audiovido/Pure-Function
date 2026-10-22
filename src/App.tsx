@@ -26,7 +26,6 @@ import {
   ThemeMode,
 } from './types';
 import {
-  loadActiveSession,
   saveActiveSession,
   loadAccounts,
   saveAccounts,
@@ -58,28 +57,18 @@ export default function App() {
     loadAccounts(loadClients())
   );
 
-  // Authentication Session (Trainer or Client)
-  const [activeAccount, setActiveAccount] = useState<AuthAccount | null>(() =>
-    loadActiveSession()
-  );
+  // Always start on the Trainer Sign In / Client Sign In screen on page load or reload
+  const [activeAccount, setActiveAccount] = useState<AuthAccount | null>(null);
 
-  const [viewMode, setViewMode] = useState<AppViewMode>(() => {
-    const session = loadActiveSession();
-    return session?.role === 'client' ? 'client' : 'trainer';
-  });
+  const [viewMode, setViewMode] = useState<AppViewMode>('trainer');
 
   const [trainerBottomTab, setTrainerBottomTab] =
     useState<TrainerBottomTab>('dashboard');
   const [clientBottomTab, setClientBottomTab] =
     useState<ClientBottomTab>('today');
 
-  const [selectedClientId, setSelectedClientId] = useState<string>(() => {
-    const session = loadActiveSession();
-    if (session?.role === 'client' && session.clientId) {
-      return session.clientId;
-    }
-    return 'alex-morgan';
-  });
+  const [selectedClientId, setSelectedClientId] =
+    useState<string>('alex-morgan');
 
   // Persistent maps per client
   const [clientWorkoutsMap, setClientWorkoutsMap] = useState<
@@ -140,11 +129,13 @@ export default function App() {
 
     if (account.role === 'client') {
       setViewMode('client');
+      setClientBottomTab('today');
       if (account.clientId) {
         setSelectedClientId(account.clientId);
       }
     } else {
       setViewMode('trainer');
+      setTrainerBottomTab('dashboard');
     }
   };
 
@@ -230,6 +221,16 @@ export default function App() {
         return [...prev, newAccount];
       });
     }
+  };
+
+  // Handler: Update existing client profile
+  const handleUpdateClient = (
+    clientId: string,
+    updates: Partial<ClientProfile>
+  ) => {
+    setClients((prev) =>
+      prev.map((c) => (c.id === clientId ? { ...c, ...updates } : c))
+    );
   };
 
   // Handler: Delete client from roster
@@ -570,6 +571,8 @@ export default function App() {
             selectedClientId={selectedClientId}
             onSelectClient={setSelectedClientId}
             onOpenClientManager={() => setIsClientManagerOpen(true)}
+            onUpdateClient={handleUpdateClient}
+            onDeleteClient={handleDeleteClient}
             workouts={workouts}
             allClientWorkouts={clientWorkoutsMap}
             selectedDate={selectedDate}

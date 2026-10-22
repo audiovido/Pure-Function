@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   MessageCircle,
+  MessageSquare,
   Activity,
   Users,
   BarChart2,
@@ -17,6 +20,8 @@ import {
   ArrowUp,
   Trash2,
   Play,
+  Archive,
+  HelpCircle,
 } from 'lucide-react';
 import {
   AuthAccount,
@@ -43,6 +48,8 @@ interface TrainerViewProps {
   selectedClientId: string;
   onSelectClient: (clientId: string) => void;
   onOpenClientManager: () => void;
+  onUpdateClient?: (clientId: string, updates: Partial<ClientProfile>) => void;
+  onDeleteClient?: (clientId: string) => void;
   workouts: DayWorkout[];
   allClientWorkouts?: Record<string, DayWorkout[]>;
   selectedDate: string;
@@ -82,7 +89,13 @@ interface TrainerViewProps {
   theme?: ThemeMode;
 }
 
-type SubScreen = 'none' | 'clientWorkouts' | 'workoutDetail' | 'directChat';
+type SubScreen =
+  | 'none'
+  | 'clientProfile'
+  | 'editClient'
+  | 'clientWorkouts'
+  | 'workoutDetail'
+  | 'directChat';
 
 function getInitials(name: string): string {
   return name
@@ -94,11 +107,60 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
+const ComplianceDonut: React.FC<{
+  percentage: number;
+  label: string;
+  color: string;
+}> = ({ percentage, label, color }) => {
+  const clamped = Math.max(0, Math.min(100, percentage));
+  const radius = 38;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (clamped / 100) * circumference;
+
+  return (
+    <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center mx-auto">
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          fill="transparent"
+          stroke="#e5e7eb"
+          strokeWidth="12"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          fill="transparent"
+          stroke={color}
+          strokeWidth="12"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="butt"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-tight">
+        <span
+          className="text-base sm:text-lg font-extrabold"
+          style={{ color }}
+        >
+          {clamped}%
+        </span>
+        <span className="text-[10px] font-medium text-neutral-500 mt-0.5">
+          {label}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export const TrainerView: React.FC<TrainerViewProps> = ({
   clients,
   selectedClientId,
   onSelectClient,
   onOpenClientManager,
+  onUpdateClient,
   workouts,
   allClientWorkouts = {},
   selectedDate,
@@ -121,6 +183,12 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
   const bottomTab = onBottomTabChange ? activeBottomTab : internalTab;
 
   const [subScreen, setSubScreen] = useState<SubScreen>('none');
+  const [workoutsBackTarget, setWorkoutsBackTarget] = useState<
+    'none' | 'clientProfile'
+  >('none');
+  const [chatBackTarget, setChatBackTarget] = useState<
+    'none' | 'clientProfile' | 'clientWorkouts'
+  >('none');
 
   // Filter & Search states for Activity / Messages / Clients
   const [activityFilter, setActivityFilter] = useState<'all' | 'unread'>('all');
@@ -140,13 +208,107 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
   // Direct Chat input state
   const [chatText, setChatText] = useState('');
 
+  // Edit Client Form states (matching IMG_3528, IMG_3529, IMG_3530)
+  const [editType, setEditType] = useState<'Remote' | 'Dual' | 'In-Person'>(
+    'Dual'
+  );
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [showAdditionalDetails, setShowAdditionalDetails] = useState(true);
+  const [editLocation, setEditLocation] = useState('Los Angeles');
+  const [editTimezone, setEditTimezone] = useState('America / Los_Angeles');
+  const [editHeightFt, setEditHeightFt] = useState('5');
+  const [editHeightIn, setEditHeightIn] = useState('4');
+  const [editWeight, setEditWeight] = useState('');
+  const [editCountryCode, setEditCountryCode] = useState('🇨🇦 +1');
+  const [editPhone, setEditPhone] = useState('(702) 808-2102');
+  const [editBirthday, setEditBirthday] = useState('12/15/1985');
+  const [editUnitPreference, setEditUnitPreference] = useState<
+    'Imperial / US' | 'Metric system'
+  >('Imperial / US');
+  const [editGender, setEditGender] = useState<
+    'M' | 'F' | 'Non-binary' | 'Prefer not to say'
+  >('F');
+  const [editEmailDaily, setEditEmailDaily] = useState(false);
+  const [editEmailMissed, setEditEmailMissed] = useState(false);
+
   const selectedClient =
     clients.find((c) => c.id === selectedClientId) || clients[0];
 
   const activeDayWorkout = getOrCreateDayWorkout(workouts, selectedDate);
 
-  const openClientWorkouts = (clientId: string) => {
+  // Open Client Profile (IMG_3524)
+  const openClientProfile = (clientId: string) => {
     onSelectClient(clientId);
+    setSubScreen('clientProfile');
+  };
+
+  // Open Edit Client (IMG_3528, IMG_3529, IMG_3530)
+  const openEditClientScreen = (client: ClientProfile) => {
+    const nameParts = client.name.trim().split(' ');
+    const defaultFirst = client.firstName ?? (nameParts[0] || '');
+    const defaultLast =
+      client.lastName ?? (nameParts.slice(1).join(' ') || '');
+
+    setEditType(client.clientType || 'Dual');
+    setEditFirstName(defaultFirst);
+    setEditLastName(defaultLast);
+    setEditEmail(client.email || '');
+    setEditLocation(client.location ?? 'Los Angeles');
+    setEditTimezone(client.timezone ?? 'America / Los_Angeles');
+    setEditHeightFt(client.heightFt ?? '5');
+    setEditHeightIn(client.heightIn ?? '4');
+    setEditWeight(client.weightLbs ?? '');
+    setEditCountryCode(client.countryCode ?? '🇨🇦 +1');
+    setEditPhone(client.phone ?? '(702) 808-2102');
+    setEditBirthday(client.birthday ?? '12/15/1985');
+    setEditUnitPreference(client.unitPreference ?? 'Imperial / US');
+    setEditGender(client.gender ?? 'F');
+    setEditEmailDaily(client.emailDailyWorkout ?? false);
+    setEditEmailMissed(client.emailMissedWorkouts ?? false);
+    setShowAdditionalDetails(true);
+    setSubScreen('editClient');
+  };
+
+  // Save edited client profile
+  const handleSaveEditedClient = (e: React.FormEvent) => {
+    e.preventDefault();
+    const combinedName =
+      `${editFirstName.trim()} ${editLastName.trim()}`.trim() ||
+      selectedClient.name;
+
+    if (onUpdateClient) {
+      onUpdateClient(selectedClient.id, {
+        name: combinedName,
+        firstName: editFirstName.trim(),
+        lastName: editLastName.trim(),
+        clientType: editType,
+        email: editEmail.trim() || selectedClient.email,
+        location: editLocation.trim(),
+        timezone: editTimezone,
+        heightFt: editHeightFt,
+        heightIn: editHeightIn,
+        weightLbs: editWeight,
+        countryCode: editCountryCode,
+        phone: editPhone,
+        birthday: editBirthday,
+        unitPreference: editUnitPreference,
+        gender: editGender,
+        emailDailyWorkout: editEmailDaily,
+        emailMissedWorkouts: editEmailMissed,
+      });
+    }
+    setSubScreen('clientProfile');
+  };
+
+  // Open Client Workouts List
+  const openClientWorkouts = (
+    clientId: string,
+    backTo: 'none' | 'clientProfile' = 'none'
+  ) => {
+    onSelectClient(clientId);
+    setWorkoutsBackTarget(backTo);
     setSubScreen('clientWorkouts');
     setIsEditWorkoutMode(false);
     setIsCommentOpen(false);
@@ -159,8 +321,12 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
     setIsCommentOpen(false);
   };
 
-  const openDirectChat = (clientId: string) => {
+  const openDirectChat = (
+    clientId: string,
+    backTo: 'none' | 'clientProfile' | 'clientWorkouts' = 'none'
+  ) => {
     onSelectClient(clientId);
+    setChatBackTarget(backTo);
     setReadMessageClientIds((prev) =>
       prev.includes(clientId) ? prev : [...prev, clientId]
     );
@@ -259,8 +425,526 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
     return `Oct ${dayNum}, ${parts[0]}`;
   };
 
+  // Compute dynamic compliance percentages for the selected client
+  const complianceStats = React.useMemo(() => {
+    const completedDaysCount = clientWorkoutDays.filter(
+      (d) => getWorkoutStatus(d) === 'Completed'
+    ).length;
+    const totalRecent = Math.max(1, clientWorkoutDays.length);
+    const dynamic7d =
+      selectedClient.compliance7d ??
+      (completedDaysCount > 0
+        ? Math.min(100, Math.round((completedDaysCount / totalRecent) * 100) + 50)
+        : 100);
+    const dynamic30d = selectedClient.compliance30d ?? 55;
+    const dynamic90d = selectedClient.compliance90d ?? 32;
+    return {
+      day7: dynamic7d,
+      day30: dynamic30d,
+      day90: dynamic90d,
+    };
+  }, [clientWorkoutDays, selectedClient]);
+
   return (
     <div className="w-full max-w-2xl mx-auto min-h-[calc(100vh-120px)] flex flex-col bg-[#f4f5f7] rounded-3xl overflow-hidden border border-neutral-200/90 shadow-sm relative pb-20">
+      {/* =========================================================
+          SUB-SCREEN A: CLIENT PROFILE (Inspired by IMG_3524)
+         ========================================================= */}
+      {subScreen === 'clientProfile' && (
+        <div className="flex-1 flex flex-col bg-[#f4f5f7]">
+          {/* Top Amber Navigation Bar */}
+          <div className="bg-amber-400 px-4 py-3.5 flex items-center justify-between text-black">
+            <button
+              type="button"
+              onClick={() => setSubScreen('none')}
+              className="p-1 -ml-1 rounded-full hover:bg-black/10 transition-colors cursor-pointer shrink-0"
+              aria-label="Back to clients"
+            >
+              <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
+            </button>
+            <span className="font-extrabold text-base sm:text-lg tracking-tight text-black truncate">
+              Client Profile
+            </span>
+            <div className="w-6 shrink-0" />
+          </div>
+
+          {/* Golden-Amber Client Identity Banner (matching IMG_3524) */}
+          <div className="bg-[#c59000] px-5 py-5 flex items-center gap-4 text-white">
+            {/* Circular Light-Gray Silhouette Avatar */}
+            <div className="w-20 h-20 rounded-full bg-neutral-200 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+              <svg
+                viewBox="0 0 64 64"
+                className="w-16 h-16 text-neutral-300 mt-3"
+                fill="currentColor"
+              >
+                <circle cx="32" cy="22" r="11" />
+                <path d="M12 58c0-11 9-19 20-19s20 8 20 19H12z" />
+              </svg>
+            </div>
+
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <div className="text-xs sm:text-sm italic font-semibold text-white/95 truncate">
+                {selectedClient.clientType || 'Dual'}
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight truncate">
+                {selectedClient.name}
+              </h2>
+              <p className="text-xs sm:text-sm text-white/90 truncate">
+                {selectedClient.email}
+              </p>
+            </div>
+          </div>
+
+          {/* Main Profile Body */}
+          <div className="flex-1 p-4 flex flex-col justify-between space-y-5">
+            <div className="space-y-4">
+              {/* Compliance Card with 3 Donut Rings (7 day, 30 day, 90 day) */}
+              <div className="bg-white rounded-3xl p-5 shadow-2xs border border-neutral-200/70">
+                <h3 className="text-center text-sm font-semibold text-neutral-800 mb-4">
+                  Compliance
+                </h3>
+                <div className="grid grid-cols-3 gap-2 items-center">
+                  <ComplianceDonut
+                    percentage={complianceStats.day7}
+                    label="7 day"
+                    color="#1f7a5a"
+                  />
+                  <ComplianceDonut
+                    percentage={complianceStats.day30}
+                    label="30 day"
+                    color="#db5439"
+                  />
+                  <ComplianceDonut
+                    percentage={complianceStats.day90}
+                    label="90 day"
+                    color="#b91c1c"
+                  />
+                </div>
+              </div>
+
+              {/* 3 Pill Action Buttons: Edit profile, Workouts, Message */}
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => openEditClientScreen(selectedClient)}
+                  className="w-full py-3.5 px-5 rounded-full bg-white hover:bg-neutral-50 border border-neutral-200/90 shadow-2xs flex items-center justify-center gap-2.5 text-neutral-900 font-semibold text-sm sm:text-base transition-colors cursor-pointer"
+                >
+                  <Edit2 className="w-4 h-4 stroke-[2] shrink-0" />
+                  <span className="truncate">Edit profile</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    openClientWorkouts(selectedClient.id, 'clientProfile')
+                  }
+                  className="w-full py-3.5 px-5 rounded-full bg-white hover:bg-neutral-50 border border-neutral-200/90 shadow-2xs flex items-center justify-center gap-2.5 text-neutral-900 font-semibold text-sm sm:text-base transition-colors cursor-pointer"
+                >
+                  <Activity className="w-4 h-4 stroke-[2] shrink-0" />
+                  <span className="truncate">Workouts</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    openDirectChat(selectedClient.id, 'clientProfile')
+                  }
+                  className="w-full py-3.5 px-5 rounded-full bg-white hover:bg-neutral-50 border border-neutral-200/90 shadow-2xs flex items-center justify-center gap-2.5 text-neutral-900 font-semibold text-sm sm:text-base transition-colors cursor-pointer"
+                >
+                  <MessageSquare className="w-4 h-4 stroke-[2] shrink-0" />
+                  <span className="truncate">Message</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Bottom Archive Pill Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onUpdateClient) {
+                    onUpdateClient(selectedClient.id, {
+                      archived: !selectedClient.archived,
+                    });
+                  }
+                }}
+                className="w-full py-3.5 px-5 rounded-full bg-white hover:bg-red-50/50 border border-neutral-200/90 shadow-2xs flex items-center justify-center gap-2.5 text-red-600 font-semibold text-sm sm:text-base transition-colors cursor-pointer"
+              >
+                <Archive className="w-4 h-4 stroke-[2] shrink-0" />
+                <span className="truncate">
+                  {selectedClient.archived ? 'Unarchive' : 'Archive'}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          SUB-SCREEN B: EDIT CLIENT (Inspired by IMG_3528, 3529, 3530)
+         ========================================================= */}
+      {subScreen === 'editClient' && (
+        <form
+          onSubmit={handleSaveEditedClient}
+          className="flex-1 flex flex-col bg-white"
+        >
+          {/* Top Amber Bar */}
+          <div className="bg-amber-400 px-4 py-3.5 flex items-center justify-between text-black">
+            <button
+              type="button"
+              onClick={() => setSubScreen('clientProfile')}
+              className="p-1 -ml-1 rounded-full hover:bg-black/10 transition-colors cursor-pointer shrink-0"
+              aria-label="Back to profile"
+            >
+              <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
+            </button>
+            <span className="font-extrabold text-base sm:text-lg tracking-tight text-black truncate">
+              Edit Client
+            </span>
+            <div className="w-6 shrink-0" />
+          </div>
+
+          {/* Scrollable Form Fields */}
+          <div className="flex-1 overflow-y-auto divide-y divide-neutral-200/80">
+            {/* Primary Info Section (IMG_3528) */}
+            <div className="p-5 space-y-4">
+              {/* Type Selector: Remote | Dual | In-Person */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-neutral-900">
+                  Type
+                </label>
+                <div className="bg-neutral-200/90 p-1 rounded-xl grid grid-cols-3 gap-1">
+                  {(['Remote', 'Dual', 'In-Person'] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setEditType(t)}
+                      className={`py-2 px-2 rounded-lg text-xs sm:text-sm transition-all cursor-pointer truncate ${
+                        editType === t
+                          ? 'bg-white text-black font-bold shadow-2xs'
+                          : 'text-neutral-600 font-medium hover:text-black'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Type Helper Box */}
+                <div className="bg-[#f1f2f5] rounded-2xl p-3.5 flex items-start gap-2.5 text-xs text-neutral-700 leading-relaxed">
+                  <HelpCircle className="w-4 h-4 text-neutral-800 shrink-0 mt-0.5" />
+                  <p className="min-w-0 break-words">
+                    {editType === 'Dual' &&
+                      'Dual clients train with you or on their own. You can enter their workout results or leave it up to them.'}
+                    {editType === 'Remote' &&
+                      'Remote clients train on their own and log their workout results directly in the app.'}
+                    {editType === 'In-Person' &&
+                      'In-Person clients train with you directly during scheduled coaching sessions.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* First Name * */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-neutral-900">
+                  First Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 outline-none focus:border-amber-400"
+                />
+              </div>
+
+              {/* Last Name * */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-neutral-900">
+                  Last Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editLastName}
+                  onChange={(e) => setEditLastName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 outline-none focus:border-amber-400"
+                />
+              </div>
+
+              {/* Email * */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-neutral-900">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-[#eceef1] text-sm text-neutral-800 outline-none focus:bg-white focus:border-amber-400"
+                />
+              </div>
+            </div>
+
+            {/* Additional details (optional) Section (IMG_3529 & IMG_3530) */}
+            <div className="p-5 space-y-4">
+              <button
+                type="button"
+                onClick={() => setShowAdditionalDetails((prev) => !prev)}
+                className="flex items-center gap-2 text-sm font-medium text-neutral-900 cursor-pointer"
+              >
+                {showAdditionalDetails ? (
+                  <ChevronUp className="w-4 h-4 text-neutral-700" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-neutral-700" />
+                )}
+                <span>Additional details (optional)</span>
+              </button>
+
+              {showAdditionalDetails && (
+                <div className="space-y-4 pt-1">
+                  <div className="bg-[#f1f2f5] rounded-2xl p-3 flex items-center gap-2 text-xs text-neutral-700">
+                    <HelpCircle className="w-4 h-4 text-neutral-800 shrink-0" />
+                    <span className="truncate">
+                      Your client can complete this info on their own.
+                    </span>
+                  </div>
+
+                  {/* Location */}
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-neutral-900">
+                      Location
+                    </label>
+                    <input
+                      type="text"
+                      value={editLocation}
+                      onChange={(e) => setEditLocation(e.target.value)}
+                      placeholder="City"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  {/* Timezone */}
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-neutral-900">
+                      Timezone
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={editTimezone}
+                        onChange={(e) => setEditTimezone(e.target.value)}
+                        className="w-full appearance-none px-3.5 py-2.5 pr-9 rounded-xl border border-neutral-200 bg-white text-sm text-neutral-900 outline-none focus:border-amber-400"
+                      >
+                        <option value="America / Los_Angeles">
+                          America / Los_Angeles
+                        </option>
+                        <option value="America / New_York">
+                          America / New_York
+                        </option>
+                        <option value="Europe / London">Europe / London</option>
+                        <option value="Asia / Tehran">Asia / Tehran</option>
+                        <option value="Asia / Dubai">Asia / Dubai</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-neutral-600 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+
+                  {/* Height & Weight */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="block text-sm font-medium text-neutral-900">
+                        Height
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={editHeightFt}
+                          onChange={(e) => setEditHeightFt(e.target.value)}
+                          placeholder="5"
+                          className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 outline-none focus:border-amber-400"
+                        />
+                        <input
+                          type="text"
+                          value={editHeightIn}
+                          onChange={(e) => setEditHeightIn(e.target.value)}
+                          placeholder="4"
+                          className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 outline-none focus:border-amber-400"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-sm font-medium text-neutral-900">
+                        Weight
+                      </label>
+                      <input
+                        type="text"
+                        value={editWeight}
+                        onChange={(e) => setEditWeight(e.target.value)}
+                        placeholder={
+                          editUnitPreference === 'Metric system' ? 'kg' : 'lbs'
+                        }
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 outline-none focus:border-amber-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Phone Number */}
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-neutral-900">
+                      Phone Number
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <div className="relative shrink-0">
+                        <select
+                          value={editCountryCode}
+                          onChange={(e) => setEditCountryCode(e.target.value)}
+                          className="appearance-none pl-3 pr-7 py-2.5 rounded-xl border border-neutral-200 bg-white text-sm text-neutral-900 outline-none focus:border-amber-400"
+                        >
+                          <option value="🇨🇦 +1">🇨🇦 +1</option>
+                          <option value="🇺🇸 +1">🇺🇸 +1</option>
+                          <option value="🇬🇧 +44">🇬🇧 +44</option>
+                          <option value="🇦🇪 +971">🇦🇪 +971</option>
+                        </select>
+                        <ChevronDown className="w-3.5 h-3.5 text-neutral-600 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+                      </div>
+                      <input
+                        type="text"
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        placeholder="(702) 808-2102"
+                        className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm text-neutral-900 outline-none focus:border-amber-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Birthday */}
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-neutral-900">
+                      Birthday
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={editBirthday}
+                        onChange={(e) => setEditBirthday(e.target.value)}
+                        placeholder="MM/DD/YYYY"
+                        className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-neutral-200 text-sm text-neutral-900 outline-none focus:border-amber-400"
+                      />
+                      <Calendar className="w-4 h-4 text-neutral-700 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+
+                  {/* Unit preference */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-neutral-900">
+                      Unit preference
+                    </label>
+                    <div className="bg-neutral-200/90 p-1 rounded-xl grid grid-cols-2 gap-1">
+                      {(['Imperial / US', 'Metric system'] as const).map(
+                        (unit) => (
+                          <button
+                            key={unit}
+                            type="button"
+                            onClick={() => setEditUnitPreference(unit)}
+                            className={`py-2 px-2 rounded-lg text-xs sm:text-sm transition-all cursor-pointer truncate ${
+                              editUnitPreference === unit
+                                ? 'bg-white text-black font-bold shadow-2xs'
+                                : 'text-neutral-600 font-medium hover:text-black'
+                            }`}
+                          >
+                            {unit}
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Gender */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-neutral-900">
+                      Gender
+                    </label>
+                    <div className="bg-neutral-200/90 p-1 rounded-xl flex items-center gap-1">
+                      {(
+                        ['M', 'F', 'Non-binary', 'Prefer not to say'] as const
+                      ).map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setEditGender(g)}
+                          className={`py-2 px-2.5 rounded-lg text-xs transition-all cursor-pointer truncate ${
+                            g.length <= 2 ? 'w-11 shrink-0' : 'flex-1 min-w-0'
+                          } ${
+                            editGender === g
+                              ? 'bg-white text-black font-bold shadow-2xs'
+                              : 'text-neutral-600 font-medium hover:text-black'
+                          }`}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Email Notification Toggles (IMG_3530) */}
+            <div className="p-5 space-y-4">
+              <div className="flex items-center gap-3.5">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editEmailDaily}
+                  onClick={() => setEditEmailDaily((prev) => !prev)}
+                  className={`w-12 h-7 rounded-full p-0.5 transition-colors cursor-pointer shrink-0 flex items-center ${
+                    editEmailDaily
+                      ? 'bg-amber-400 justify-end'
+                      : 'bg-neutral-400/80 justify-start'
+                  }`}
+                >
+                  <span className="w-6 h-6 rounded-full bg-white shadow-xs block" />
+                </button>
+                <span className="text-sm text-neutral-800 truncate">
+                  Email daily workout
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3.5">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editEmailMissed}
+                  onClick={() => setEditEmailMissed((prev) => !prev)}
+                  className={`w-12 h-7 rounded-full p-0.5 transition-colors cursor-pointer shrink-0 flex items-center ${
+                    editEmailMissed
+                      ? 'bg-amber-400 justify-end'
+                      : 'bg-neutral-400/80 justify-start'
+                  }`}
+                >
+                  <span className="w-6 h-6 rounded-full bg-white shadow-xs block" />
+                </button>
+                <span className="text-sm text-neutral-800 truncate">
+                  Email missed workouts
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Save Client Pill Button */}
+          <div className="p-4 bg-white border-t border-neutral-200/80">
+            <button
+              type="submit"
+              className="w-full py-3.5 rounded-full bg-[#e8eaed] hover:bg-amber-400 text-neutral-700 hover:text-black font-bold text-sm sm:text-base transition-colors cursor-pointer"
+            >
+              Save Client
+            </button>
+          </div>
+        </form>
+      )}
+
       {/* =========================================================
           SUB-SCREEN 1: DIRECT 1-ON-1 CHAT
          ========================================================= */}
@@ -269,7 +953,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           <div className="bg-amber-400 px-4 py-3.5 flex items-center justify-between gap-2 text-black">
             <button
               type="button"
-              onClick={() => setSubScreen('none')}
+              onClick={() => setSubScreen(chatBackTarget)}
               className="p-1 -ml-1 rounded-full hover:bg-black/10 transition-colors cursor-pointer shrink-0"
               aria-label="Back"
             >
@@ -376,7 +1060,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           <div className="bg-amber-400 px-4 py-3.5 flex items-center justify-between gap-2 text-black">
             <button
               type="button"
-              onClick={() => setSubScreen('none')}
+              onClick={() => setSubScreen(workoutsBackTarget)}
               className="p-1 -ml-1 rounded-full hover:bg-black/10 transition-colors cursor-pointer shrink-0"
               aria-label="Back"
             >
@@ -397,7 +1081,9 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => openDirectChat(selectedClient.id)}
+              onClick={() =>
+                openDirectChat(selectedClient.id, 'clientWorkouts')
+              }
               className="p-1.5 rounded-full hover:bg-black/10 transition-colors cursor-pointer shrink-0"
               aria-label="Message client"
             >
@@ -469,7 +1155,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
       )}
 
       {/* =========================================================
-          SUB-SCREEN 3: WORKOUT DETAIL (No A/B Badges, Clean Cards)
+          SUB-SCREEN 3: WORKOUT DETAIL
          ========================================================= */}
       {subScreen === 'workoutDetail' && (
         <div className="flex-1 flex flex-col bg-[#f4f5f7]">
@@ -499,7 +1185,9 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => openDirectChat(selectedClient.id)}
+                onClick={() =>
+                  openDirectChat(selectedClient.id, 'clientWorkouts')
+                }
                 className="p-1.5 rounded-full hover:bg-black/10 transition-colors cursor-pointer shrink-0"
                 aria-label="Chat"
               >
@@ -654,50 +1342,52 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           </div>
 
           <div className="px-4 space-y-2.5">
-            {clients.map((client) => (
-              <div
-                key={client.id}
-                onClick={() => openClientWorkouts(client.id)}
-                className="bg-white rounded-3xl px-4 py-3.5 border border-neutral-200/70 shadow-2xs flex items-center justify-between gap-3 hover:border-neutral-300 transition-colors cursor-pointer overflow-hidden"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-800 font-bold text-xs flex items-center justify-center shrink-0">
-                    {getInitials(client.name)}
-                  </div>
-                  <span className="text-sm sm:text-base font-bold text-neutral-900 truncate">
-                    {client.name}
-                  </span>
-                </div>
-
+            {clients
+              .filter((c) => !c.archived)
+              .map((client) => (
                 <div
-                  className="flex items-center gap-2 text-neutral-400 shrink-0"
-                  onClick={(e) => e.stopPropagation()}
+                  key={client.id}
+                  onClick={() => openClientWorkouts(client.id, 'none')}
+                  className="bg-white rounded-3xl px-4 py-3.5 border border-neutral-200/70 shadow-2xs flex items-center justify-between gap-3 hover:border-neutral-300 transition-colors cursor-pointer overflow-hidden"
                 >
-                  <button
-                    type="button"
-                    onClick={() => openDirectChat(client.id)}
-                    className="w-9 h-9 rounded-full hover:bg-neutral-100 hover:text-neutral-800 flex items-center justify-center transition-colors cursor-pointer"
-                    title="Message"
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-800 font-bold text-xs flex items-center justify-center shrink-0">
+                      {getInitials(client.name)}
+                    </div>
+                    <span className="text-sm sm:text-base font-bold text-neutral-900 truncate">
+                      {client.name}
+                    </span>
+                  </div>
+
+                  <div
+                    className="flex items-center gap-2 text-neutral-400 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <MessageCircle className="w-5 h-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openClientWorkouts(client.id)}
-                    className="w-9 h-9 rounded-full hover:bg-neutral-100 hover:text-neutral-800 flex items-center justify-center transition-colors cursor-pointer"
-                    title="Workouts"
-                  >
-                    <Activity className="w-5 h-5" />
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => openDirectChat(client.id, 'none')}
+                      className="w-9 h-9 rounded-full hover:bg-neutral-100 hover:text-neutral-800 flex items-center justify-center transition-colors cursor-pointer"
+                      title="Message"
+                    >
+                      <MessageCircle className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openClientWorkouts(client.id, 'none')}
+                      className="w-9 h-9 rounded-full hover:bg-neutral-100 hover:text-neutral-800 flex items-center justify-center transition-colors cursor-pointer"
+                      title="Workouts"
+                    >
+                      <Activity className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       )}
 
       {/* =========================================================
-          MAIN TAB 2: CLIENTS ROSTER
+          MAIN TAB 2: CLIENTS ROSTER (Opens Client Profile on Click)
          ========================================================= */}
       {subScreen === 'none' && bottomTab === 'clients' && (
         <div className="flex-1 flex flex-col bg-[#f4f5f7]">
@@ -730,7 +1420,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
               .map((client) => (
                 <div
                   key={client.id}
-                  onClick={() => openClientWorkouts(client.id)}
+                  onClick={() => openClientProfile(client.id)}
                   className="bg-white rounded-3xl px-4 py-3.5 border border-neutral-200/70 shadow-2xs flex items-center justify-between gap-3 hover:border-neutral-300 transition-colors cursor-pointer overflow-hidden"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -742,7 +1432,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
                         {client.name}
                       </div>
                       <div className="text-xs text-neutral-500 truncate">
-                        {client.currentProgram}
+                        {client.clientType || 'Dual'} · {client.currentProgram}
                       </div>
                     </div>
                   </div>
@@ -953,7 +1643,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
                 return (
                   <div
                     key={client.id}
-                    onClick={() => openDirectChat(client.id)}
+                    onClick={() => openDirectChat(client.id, 'none')}
                     className="bg-white rounded-3xl px-4 py-3.5 border border-neutral-200/70 shadow-2xs flex items-center justify-between gap-3 hover:border-neutral-300 transition-colors cursor-pointer overflow-hidden"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
