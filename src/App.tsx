@@ -570,7 +570,7 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
+      className={`h-dvh overflow-hidden flex flex-col font-sans transition-colors duration-200 ${
         isDark
           ? 'bg-[#090b0e] text-slate-100'
           : 'bg-white text-neutral-900'
@@ -578,11 +578,10 @@ export default function App() {
     >
       {/* 
         HEADER:
-        Black background so Pure Function logo is White & Yellow,
-        with a Yellow box and centered Black text showing the current section
-        (Dashboard, Clients, Activity, Messages, Account)
+        Locked at the top of the viewport, with Pure Function logo in White & Yellow,
+        and a Yellow box with centered Black text showing the current section
       */}
-      <header className="sticky top-0 z-40 overflow-hidden bg-gradient-to-b from-[#2b303c] via-[#1d212b] to-[#14171f] border-b border-neutral-700/70 px-3 sm:px-6 py-2.5 shadow-[0_6px_18px_-4px_rgba(20,23,31,0.28),inset_0_1px_1px_rgba(255,255,255,0.14)]">
+      <header className="shrink-0 sticky top-0 z-40 overflow-hidden bg-gradient-to-b from-[#2b303c] via-[#1d212b] to-[#14171f] border-b border-neutral-700/70 px-3 sm:px-6 py-2.5 shadow-[0_6px_18px_-4px_rgba(20,23,31,0.28),inset_0_1px_1px_rgba(255,255,255,0.14)]">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.07] to-transparent" />
         <div className="relative z-10 max-w-6xl mx-auto flex items-center justify-between min-h-[42px] sm:min-h-[48px]">
           {/* Left: Pure Function Logo in White & Yellow */}
@@ -600,8 +599,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-3 sm:p-6 max-w-6xl mx-auto w-full">
+      {/* Main Content Area (Constrained to remaining viewport height so bottom footer stays locked) */}
+      <main className="flex-1 min-h-0 p-2 sm:p-4 max-w-6xl mx-auto w-full flex flex-col overflow-hidden">
         {/* View Mode 1: Trainer View (TrueCoach Minimal Model) */}
         {isTrainerAccount && viewMode === 'trainer' && (
           <TrainerView
@@ -664,6 +663,9 @@ export default function App() {
             dailyNutrition={clientNutritionForDate}
             onUpdateDailyNutrition={handleUpdateDailyNutrition}
             onUpdateHomework={handleUpdateHomework}
+            onUpdateClientAvatar={(avatarUrl) =>
+              handleUpdateClient(currentClient.id, { avatarUrl })
+            }
             messages={clientMessages}
             onSendMessage={handleSendMessage}
             onSignOut={handleSignOut}

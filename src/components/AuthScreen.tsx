@@ -343,25 +343,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         <div className="w-full max-w-[320px] flex flex-col items-stretch gap-4">
           {/* Side-by-Side (Left & Right) True 1:1 Squares Aligned Flush with Form */}
           <div className="grid grid-cols-2 gap-3.5 w-full">
-            {/* Left Square: TRAINER / SIGN IN (Yellow Glass Background, Soft 3D Diffused Edge) */}
+            {/* Left Square: TRAINER / SIGN IN */}
             <button
               type="button"
               onClick={() => setSelectedRole('trainer')}
-              className={`relative w-full aspect-square rounded-2xl border backdrop-blur-md flex flex-col items-center justify-center gap-2.5 p-3 transition-all duration-300 cursor-pointer overflow-hidden bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 text-black ${
+              className={`relative w-full aspect-square rounded-2xl border flex flex-col items-center justify-center gap-2.5 p-3 transition-all duration-300 cursor-pointer overflow-hidden bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 text-black ${
                 selectedRole === 'trainer'
-                  ? 'border-white/70 shadow-[0_14px_28px_-6px_rgba(245,158,11,0.45),0_0_12px_2px_rgba(43,48,60,0.16),inset_0_2px_3px_rgba(255,255,255,0.88),inset_0_-3px_6px_rgba(180,83,9,0.28)] scale-[1.015]'
-                  : 'border-amber-300/50 opacity-80 hover:opacity-100 shadow-[0_6px_14px_-4px_rgba(245,158,11,0.24),inset_0_1.5px_2px_rgba(255,255,255,0.65)]'
+                  ? 'border-amber-300 shadow-[0_8px_18px_-6px_rgba(245,158,11,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.75)] scale-[1.01]'
+                  : 'border-amber-300/60 opacity-80 hover:opacity-100 shadow-[0_4px_10px_-4px_rgba(245,158,11,0.2),inset_0_1px_1.5px_rgba(255,255,255,0.55)]'
               }`}
             >
-              {/* Soft 3D top specular highlight & subtle inner rim glow */}
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/40 to-transparent" />
-              <div
-                className={`pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-300 ${
-                  selectedRole === 'trainer'
-                    ? 'opacity-100 shadow-[inset_0_0_10px_rgba(43,48,60,0.18)]'
-                    : 'opacity-0'
-                }`}
-              />
               <BlackGlassTrainerIcon />
               <div className="relative z-10 flex flex-col items-center leading-none">
                 <span className="text-[13px] font-black tracking-wider uppercase text-black">
@@ -373,25 +364,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               </div>
             </button>
 
-            {/* Right Square: CLIENT / SIGN IN (Charcoal-Black Glass Background, Soft 3D Diffused Edge) */}
+            {/* Right Square: CLIENT / SIGN IN */}
             <button
               type="button"
               onClick={() => setSelectedRole('client')}
-              className={`relative w-full aspect-square rounded-2xl border backdrop-blur-md flex flex-col items-center justify-center gap-2.5 p-3 transition-all duration-300 cursor-pointer overflow-hidden bg-gradient-to-b from-[#323846] via-[#202531] to-[#151821] text-amber-400 ${
+              className={`relative w-full aspect-square rounded-2xl border flex flex-col items-center justify-center gap-2.5 p-3 transition-all duration-300 cursor-pointer overflow-hidden bg-gradient-to-b from-[#323846] via-[#202531] to-[#151821] text-amber-400 ${
                 selectedRole === 'client'
-                  ? 'border-amber-300/35 shadow-[0_14px_28px_-6px_rgba(21,24,33,0.42),0_0_14px_2px_rgba(251,191,36,0.26),inset_0_2px_3px_rgba(255,255,255,0.26),inset_0_-3px_6px_rgba(0,0,0,0.45)] scale-[1.015]'
-                  : 'border-white/12 opacity-85 hover:opacity-100 shadow-[0_6px_14px_-4px_rgba(21,24,33,0.26),inset_0_1.5px_2px_rgba(255,255,255,0.16)]'
+                  ? 'border-neutral-600/80 shadow-[0_8px_18px_-6px_rgba(21,24,33,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.2)] scale-[1.01]'
+                  : 'border-neutral-700/60 opacity-85 hover:opacity-100 shadow-[0_4px_10px_-4px_rgba(21,24,33,0.22),inset_0_1px_1.5px_rgba(255,255,255,0.14)]'
               }`}
             >
-              {/* Soft 3D top specular highlight & subtle inner rim glow */}
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.14] to-transparent" />
-              <div
-                className={`pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-300 ${
-                  selectedRole === 'client'
-                    ? 'opacity-100 shadow-[inset_0_0_12px_rgba(251,191,36,0.2)]'
-                    : 'opacity-0'
-                }`}
-              />
               <YellowGlassClientIcon />
               <div className="relative z-10 flex flex-col items-center leading-none">
                 <span className="text-[13px] font-black tracking-wider uppercase text-amber-400">
@@ -404,55 +386,49 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             </button>
           </div>
 
-          {/* Flush-Aligned Username & Password Form (Always Visible) */}
+          {/* Flush-Aligned Username & Password Form (Clean Liquid Silver-Gray Card without extra inner lines/halos) */}
           <form
             onSubmit={handleSignIn}
-            className="w-full p-5 rounded-2xl border border-neutral-200 bg-[#f9fafb] shadow-[0_8px_24px_-6px_rgba(0,0,0,0.07)] space-y-4 transition-all"
+            className="w-full p-5 rounded-2xl border border-slate-300/80 bg-gradient-to-b from-[#f3f5f8] via-[#e4e8f0] to-[#d5dbe6] shadow-[0_10px_24px_-8px_rgba(71,85,105,0.18),inset_0_1.5px_2px_rgba(255,255,255,0.9)] space-y-4 transition-all"
           >
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5 text-neutral-500">
+              <label className="block text-[10px] font-extrabold uppercase tracking-widest mb-1.5 text-slate-600">
                 Username
               </label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Username"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-900 text-xs sm:text-sm outline-none transition-colors focus:border-amber-500"
+                aria-label="Username"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300/80 bg-white text-neutral-900 text-xs sm:text-sm outline-none transition-all focus:border-amber-400"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5 text-neutral-500">
+              <label className="block text-[10px] font-extrabold uppercase tracking-widest mb-1.5 text-slate-600">
                 Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-900 text-xs sm:text-sm outline-none transition-colors focus:border-amber-500"
+                aria-label="Password"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300/80 bg-white text-neutral-900 text-xs sm:text-sm outline-none transition-all focus:border-amber-400"
               />
             </div>
 
             <button
               type="submit"
-              className={`relative overflow-hidden w-full py-2.5 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer border ${
+              className={`w-full py-2.5 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer border ${
                 selectedRole === 'trainer'
-                  ? 'bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 hover:from-amber-200 hover:to-amber-400 text-black border-white/60 shadow-[0_8px_18px_-4px_rgba(245,158,11,0.38),inset_0_1.5px_2px_rgba(255,255,255,0.8),inset_0_-2px_4px_rgba(180,83,9,0.22)]'
-                  : 'bg-gradient-to-b from-[#323846] via-[#202531] to-[#151821] hover:from-[#3a4152] hover:via-[#262c3a] hover:to-[#1a1e29] text-amber-400 border-amber-300/25 shadow-[0_8px_18px_-4px_rgba(21,24,33,0.36),inset_0_1.5px_2px_rgba(255,255,255,0.22),inset_0_-2px_5px_rgba(0,0,0,0.4)]'
+                  ? 'bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 hover:from-amber-200 hover:to-amber-400 text-black border-amber-300 shadow-[0_6px_14px_-4px_rgba(245,158,11,0.32),inset_0_1px_1.5px_rgba(255,255,255,0.75)]'
+                  : 'bg-gradient-to-b from-[#323846] via-[#202531] to-[#151821] hover:from-[#3a4152] hover:via-[#262c3a] hover:to-[#1a1e29] text-amber-400 border-neutral-600/80 shadow-[0_6px_14px_-4px_rgba(21,24,33,0.32),inset_0_1px_1.5px_rgba(255,255,255,0.18)]'
               }`}
             >
-              {/* Soft 3D top glass highlight matching the upper role cards */}
-              <div
-                className={`pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b to-transparent ${
-                  selectedRole === 'trainer' ? 'from-white/35' : 'from-white/[0.14]'
-                }`}
-              />
-              <span className="relative z-10">
+              <span>
                 Sign In ({selectedRole === 'trainer' ? 'Trainer' : 'Client'})
               </span>
-              <ArrowRight className="relative z-10 w-3.5 h-3.5" />
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </form>
         </div>

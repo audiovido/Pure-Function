@@ -446,14 +446,14 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
   }, [clientWorkoutDays, selectedClient]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto min-h-[calc(100vh-120px)] flex flex-col bg-[#f4f5f7] rounded-3xl overflow-hidden border border-neutral-200/90 shadow-sm relative">
+    <div className="w-full max-w-2xl mx-auto flex-1 min-h-0 flex flex-col bg-[#f4f5f7] rounded-3xl overflow-hidden border border-neutral-200/90 shadow-sm relative">
       {/* =========================================================
           SUB-SCREEN A: CLIENT PROFILE (Inspired by IMG_3524)
          ========================================================= */}
       {subScreen === 'clientProfile' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7]">
-          {/* Top Amber Navigation Bar */}
-          <div className="bg-amber-400 px-4 py-3.5 flex items-center justify-between text-black">
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] overflow-hidden">
+          {/* Top Amber Navigation Bar (Locked at top) */}
+          <div className="shrink-0 bg-amber-400 px-4 py-3.5 flex items-center justify-between text-black">
             <button
               type="button"
               onClick={() => setSubScreen('none')}
@@ -468,36 +468,43 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
             <div className="w-6 shrink-0" />
           </div>
 
-          {/* Golden-Amber Client Identity Banner (matching IMG_3524) */}
-          <div className="bg-[#c59000] px-5 py-5 flex items-center gap-4 text-white">
-            {/* Circular Light-Gray Silhouette Avatar */}
-            <div className="w-20 h-20 rounded-full bg-neutral-200 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
-              <svg
-                viewBox="0 0 64 64"
-                className="w-16 h-16 text-neutral-300 mt-3"
-                fill="currentColor"
-              >
-                <circle cx="32" cy="22" r="11" />
-                <path d="M12 58c0-11 9-19 20-19s20 8 20 19H12z" />
-              </svg>
-            </div>
-
-            <div className="min-w-0 flex-1 space-y-0.5">
-              <div className="text-xs sm:text-sm italic font-semibold text-white/95 truncate">
-                {selectedClient.clientType || 'Dual'}
-              </div>
-              <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight truncate">
-                {selectedClient.name}
-              </h2>
-              <p className="text-xs sm:text-sm text-white/90 truncate">
-                {selectedClient.email}
-              </p>
-            </div>
-          </div>
-
-          {/* Main Profile Body */}
-          <div className="flex-1 p-4 flex flex-col justify-between space-y-5">
+          {/* Main Scrollable Profile Body (Client Identity Card scrolls naturally) */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col justify-between space-y-5">
             <div className="space-y-4">
+              {/* Soft Gray Client Introduction Card (Display-Only Avatar uploaded by Client) */}
+              <div className="bg-[#e5e7eb] rounded-3xl p-4 sm:p-5 border border-neutral-300/80 shadow-2xs flex items-center gap-4">
+                <div className="w-20 h-20 rounded-full bg-white border border-neutral-300/90 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                  {selectedClient.avatarUrl ? (
+                    <img
+                      src={selectedClient.avatarUrl}
+                      alt={selectedClient.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <svg
+                      viewBox="0 0 64 64"
+                      className="w-16 h-16 text-neutral-300 mt-3"
+                      fill="currentColor"
+                    >
+                      <circle cx="32" cy="22" r="11" />
+                      <path d="M12 58c0-11 9-19 20-19s20 8 20 19H12z" />
+                    </svg>
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div className="text-xs sm:text-sm italic font-semibold text-neutral-600 truncate">
+                    {selectedClient.clientType || 'Dual'}
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-extrabold text-neutral-900 tracking-tight truncate">
+                    {selectedClient.name}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-neutral-600 truncate">
+                    {selectedClient.email}
+                  </p>
+                </div>
+              </div>
+
               {/* Compliance Card with 3 Donut Rings (7 day, 30 day, 90 day) */}
               <div className="bg-white rounded-3xl p-5 shadow-2xs border border-neutral-200/70">
                 <h3 className="text-center text-sm font-semibold text-neutral-800 mb-4">
@@ -586,10 +593,10 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
       {subScreen === 'editClient' && (
         <form
           onSubmit={handleSaveEditedClient}
-          className="flex-1 flex flex-col bg-white"
+          className="flex-1 min-h-0 flex flex-col bg-white overflow-hidden"
         >
           {/* Top Amber Bar */}
-          <div className="bg-amber-400 px-4 py-3.5 flex items-center justify-between text-black">
+          <div className="shrink-0 bg-amber-400 px-4 py-3.5 flex items-center justify-between text-black">
             <button
               type="button"
               onClick={() => setSubScreen('clientProfile')}
@@ -605,7 +612,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           </div>
 
           {/* Scrollable Form Fields */}
-          <div className="flex-1 overflow-y-auto divide-y divide-neutral-200/80">
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-neutral-200/80">
             {/* Primary Info Section (IMG_3528) */}
             <div className="p-5 space-y-4">
               {/* Type Selector: Remote | Dual | In-Person */}
@@ -934,7 +941,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           </div>
 
           {/* Bottom Save Client Pill Button */}
-          <div className="p-4 bg-white border-t border-neutral-200/80">
+          <div className="shrink-0 p-4 bg-white border-t border-neutral-200/80">
             <button
               type="submit"
               className="w-full py-3.5 rounded-full bg-[#e8eaed] hover:bg-amber-400 text-neutral-700 hover:text-black font-bold text-sm sm:text-base transition-colors cursor-pointer"
@@ -949,8 +956,8 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           SUB-SCREEN 1: DIRECT 1-ON-1 CHAT
          ========================================================= */}
       {subScreen === 'directChat' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7] min-h-[540px]">
-          <div className="bg-amber-400 px-4 py-3.5 flex items-center justify-between gap-2 text-black">
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] overflow-hidden">
+          <div className="shrink-0 bg-amber-400 px-4 py-3.5 flex items-center justify-between gap-2 text-black">
             <button
               type="button"
               onClick={() => setSubScreen(chatBackTarget)}
@@ -960,8 +967,16 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
               <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
             </button>
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-full bg-white text-neutral-900 font-bold text-xs flex items-center justify-center shadow-xs shrink-0">
-                {getInitials(selectedClient.name)}
+              <div className="w-9 h-9 rounded-full bg-white text-neutral-900 font-bold text-xs flex items-center justify-center shadow-xs shrink-0 overflow-hidden">
+                {selectedClient.avatarUrl ? (
+                  <img
+                    src={selectedClient.avatarUrl}
+                    alt={selectedClient.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  getInitials(selectedClient.name)
+                )}
               </div>
               <span className="font-bold text-sm sm:text-base tracking-tight text-black truncate">
                 {selectedClient.name}
@@ -970,7 +985,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
             <div className="w-6 shrink-0" />
           </div>
 
-          <div className="flex-1 p-4 overflow-y-auto flex flex-col justify-center">
+          <div className="flex-1 min-h-0 p-4 overflow-y-auto flex flex-col justify-center">
             {messages.length === 0 ? (
               <div className="my-auto flex flex-col items-center justify-center py-10">
                 <p className="text-neutral-400 font-bold text-sm">
@@ -1011,7 +1026,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
 
           <form
             onSubmit={handleSendChat}
-            className="bg-white border-t border-neutral-200 px-3.5 py-3 flex items-center gap-2.5"
+            className="shrink-0 bg-white border-t border-neutral-200 px-3.5 py-3 flex items-center gap-2.5"
           >
             <button
               type="button"
@@ -1056,8 +1071,8 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           SUB-SCREEN 2: CLIENT WORKOUTS LIST
          ========================================================= */}
       {subScreen === 'clientWorkouts' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7] relative">
-          <div className="bg-amber-400 px-4 py-3.5 flex items-center justify-between gap-2 text-black">
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] relative overflow-hidden">
+          <div className="shrink-0 bg-amber-400 px-4 py-3.5 flex items-center justify-between gap-2 text-black">
             <button
               type="button"
               onClick={() => setSubScreen(workoutsBackTarget)}
@@ -1067,8 +1082,16 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
               <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
             </button>
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-full bg-white text-neutral-900 font-bold text-xs flex items-center justify-center shadow-xs shrink-0">
-                {getInitials(selectedClient.name)}
+              <div className="w-9 h-9 rounded-full bg-white text-neutral-900 font-bold text-xs flex items-center justify-center shadow-xs shrink-0 overflow-hidden">
+                {selectedClient.avatarUrl ? (
+                  <img
+                    src={selectedClient.avatarUrl}
+                    alt={selectedClient.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  getInitials(selectedClient.name)
+                )}
               </div>
               <div className="min-w-0 text-left">
                 <div className="font-bold text-sm sm:text-base tracking-tight text-black truncate">
@@ -1091,7 +1114,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
             </button>
           </div>
 
-          <div className="bg-white p-3.5 border-b border-neutral-200/80">
+          <div className="shrink-0 bg-white p-3.5 border-b border-neutral-200/80">
             <div className="border border-neutral-200 rounded-full px-4 py-2.5 flex items-center justify-between bg-white">
               <span className="text-xs sm:text-sm font-medium text-neutral-700 truncate">
                 Oct 15 - Oct 22, 2026
@@ -1100,7 +1123,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+          <div className="flex-1 min-h-0 p-4 space-y-4 overflow-y-auto">
             {clientWorkoutDays.map((day) => {
               const status = getWorkoutStatus(day);
               const isCompleted = status === 'Completed';
@@ -1145,7 +1168,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
             onClick={() => {
               if (onAddExerciseClick) onAddExerciseClick();
             }}
-            className="fixed sm:absolute bottom-24 right-6 w-12 h-12 rounded-full bg-[#252a36] hover:bg-[#1b1f29] text-amber-400 shadow-lg flex items-center justify-center transition-transform hover:scale-105 cursor-pointer z-20"
+            className="absolute bottom-5 right-5 w-12 h-12 rounded-full bg-[#252a36] hover:bg-[#1b1f29] text-amber-400 shadow-lg flex items-center justify-center transition-transform hover:scale-105 cursor-pointer z-20"
             title="Add Exercise"
             aria-label="Add Exercise"
           >
@@ -1158,8 +1181,8 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           SUB-SCREEN 3: WORKOUT DETAIL
          ========================================================= */}
       {subScreen === 'workoutDetail' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7]">
-          <div className="bg-amber-400 px-4 py-3.5 text-black">
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] overflow-hidden">
+          <div className="shrink-0 bg-amber-400 px-4 py-3.5 text-black">
             <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
@@ -1170,8 +1193,16 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
                 <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
               </button>
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-full bg-white text-neutral-900 font-bold text-xs flex items-center justify-center shadow-xs shrink-0">
-                  {getInitials(selectedClient.name)}
+                <div className="w-9 h-9 rounded-full bg-white text-neutral-900 font-bold text-xs flex items-center justify-center shadow-xs shrink-0 overflow-hidden">
+                  {selectedClient.avatarUrl ? (
+                    <img
+                      src={selectedClient.avatarUrl}
+                      alt={selectedClient.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    getInitials(selectedClient.name)
+                  )}
                 </div>
                 <div className="min-w-0 text-left">
                   <div className="font-bold text-sm sm:text-base text-black truncate">
@@ -1196,7 +1227,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 p-4 space-y-3 overflow-y-auto">
+          <div className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto">
             {activeDayWorkout.exercises.length === 0 ? (
               <div className="bg-white rounded-3xl p-8 text-center border border-neutral-200/70 my-6">
                 <p className="text-sm text-neutral-500 mb-3">No exercises</p>
@@ -1325,23 +1356,14 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           MAIN TAB 1: DASHBOARD
          ========================================================= */}
       {subScreen === 'none' && bottomTab === 'dashboard' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7]">
-          <div className="px-5 py-3.5 flex items-center justify-between">
-            <div className="w-6" />
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] overflow-hidden">
+          <div className="shrink-0 px-5 py-3.5 flex items-center justify-center">
             <span className="text-xs font-bold text-neutral-500">
               Today&apos;s workouts
             </span>
-            <button
-              type="button"
-              onClick={onOpenClientManager}
-              className="p-1 rounded-full text-neutral-600 hover:text-black transition-colors cursor-pointer"
-              title="Clients"
-            >
-              <Users className="w-5 h-5 stroke-[2]" />
-            </button>
           </div>
 
-          <div className="px-4 space-y-2.5">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-2.5">
             {clients
               .filter((c) => !c.archived)
               .map((client) => (
@@ -1351,8 +1373,16 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
                   className="bg-white rounded-3xl px-4 py-3.5 border border-neutral-200/70 shadow-2xs flex items-center justify-between gap-3 hover:border-neutral-300 transition-colors cursor-pointer overflow-hidden"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-800 font-bold text-xs flex items-center justify-center shrink-0">
-                      {getInitials(client.name)}
+                    <div className="w-10 h-10 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-800 font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                      {client.avatarUrl ? (
+                        <img
+                          src={client.avatarUrl}
+                          alt={client.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        getInitials(client.name)
+                      )}
                     </div>
                     <span className="text-sm sm:text-base font-bold text-neutral-900 truncate">
                       {client.name}
@@ -1390,8 +1420,8 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           MAIN TAB 2: CLIENTS ROSTER (Opens Client Profile on Click)
          ========================================================= */}
       {subScreen === 'none' && bottomTab === 'clients' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7]">
-          <div className="p-3.5 bg-white border-b border-neutral-200/80 flex items-center gap-2.5">
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] overflow-hidden">
+          <div className="shrink-0 p-3.5 bg-white border-b border-neutral-200/80 flex items-center gap-2.5">
             <div className="flex-1 min-w-0 flex items-center gap-2.5 bg-[#f4f5f7] px-3.5 py-2.5 rounded-full">
               <Search className="w-4 h-4 text-neutral-400 shrink-0" />
               <input
@@ -1412,7 +1442,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
             </button>
           </div>
 
-          <div className="p-4 space-y-2.5">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2.5">
             {clients
               .filter((c) =>
                 c.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -1424,8 +1454,16 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
                   className="bg-white rounded-3xl px-4 py-3.5 border border-neutral-200/70 shadow-2xs flex items-center justify-between gap-3 hover:border-neutral-300 transition-colors cursor-pointer overflow-hidden"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-800 font-bold text-xs flex items-center justify-center shrink-0">
-                      {getInitials(client.name)}
+                    <div className="w-10 h-10 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-800 font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                      {client.avatarUrl ? (
+                        <img
+                          src={client.avatarUrl}
+                          alt={client.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        getInitials(client.name)
+                      )}
                     </div>
                     <div className="min-w-0">
                       <div className="text-sm sm:text-base font-bold text-neutral-900 truncate">
@@ -1447,8 +1485,8 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           MAIN TAB 3: CLIENT ACTIVITY
          ========================================================= */}
       {subScreen === 'none' && bottomTab === 'activity' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7]">
-          <div className="bg-amber-400 px-4 py-3 text-black space-y-2.5">
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] overflow-hidden">
+          <div className="shrink-0 bg-amber-400 px-4 py-3 text-black space-y-2.5">
             <div className="flex items-center gap-3">
               <div className="flex-1 bg-black/15 p-0.5 rounded-full grid grid-cols-2">
                 <button
@@ -1494,7 +1532,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
             )}
           </div>
 
-          <div className="p-4 space-y-2.5 flex-1">
+          <div className="p-4 space-y-2.5 flex-1 min-h-0 overflow-y-auto">
             {activityItems
               .filter((item) => {
                 if (
@@ -1571,8 +1609,8 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           MAIN TAB 4: MESSAGES
          ========================================================= */}
       {subScreen === 'none' && bottomTab === 'messages' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7]">
-          <div className="bg-amber-400 px-4 py-3 text-black space-y-2.5">
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] overflow-hidden">
+          <div className="shrink-0 bg-amber-400 px-4 py-3 text-black space-y-2.5">
             <div className="flex items-center gap-3">
               <div className="flex-1 bg-black/15 p-0.5 rounded-full grid grid-cols-2">
                 <button
@@ -1618,7 +1656,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
             )}
           </div>
 
-          <div className="p-4 space-y-2.5 flex-1">
+          <div className="p-4 space-y-2.5 flex-1 min-h-0 overflow-y-auto">
             {clients
               .filter((client) => {
                 if (
@@ -1647,8 +1685,16 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
                     className="bg-white rounded-3xl px-4 py-3.5 border border-neutral-200/70 shadow-2xs flex items-center justify-between gap-3 hover:border-neutral-300 transition-colors cursor-pointer overflow-hidden"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="w-10 h-10 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-800 font-bold text-xs flex items-center justify-center shrink-0">
-                        {getInitials(client.name)}
+                      <div className="w-10 h-10 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-800 font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                        {client.avatarUrl ? (
+                          <img
+                            src={client.avatarUrl}
+                            alt={client.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          getInitials(client.name)
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="font-bold text-sm sm:text-base text-neutral-900 truncate">
@@ -1671,8 +1717,8 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           MAIN TAB 5: ACCOUNT
          ========================================================= */}
       {subScreen === 'none' && bottomTab === 'account' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7]">
-          <div className="bg-amber-400 px-5 py-5 flex items-center gap-3.5 text-black">
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] overflow-hidden">
+          <div className="shrink-0 bg-amber-400 px-5 py-5 flex items-center gap-3.5 text-black">
             <div className="w-14 h-14 rounded-full bg-white text-neutral-900 font-black text-base flex items-center justify-center shadow-sm shrink-0">
               {getInitials(activeAccount?.displayName || 'Marcus Vance')}
             </div>
@@ -1686,7 +1732,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
             </div>
           </div>
 
-          <div className="p-4 flex-1 flex flex-col justify-between space-y-5">
+          <div className="p-4 flex-1 min-h-0 overflow-y-auto flex flex-col justify-between space-y-5">
             <div className="bg-white rounded-3xl shadow-2xs border border-neutral-200/70 divide-y divide-neutral-200/70 overflow-hidden">
               {[
                 {

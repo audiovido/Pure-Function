@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -57,6 +57,7 @@ interface ClientViewProps {
   dailyNutrition?: DailyNutritionEntry;
   onUpdateDailyNutrition?: (updated: DailyNutritionEntry) => void;
   onUpdateHomework?: (homework: ClientHomework[]) => void;
+  onUpdateClientAvatar?: (avatarUrl: string) => void;
   messages?: DirectMessage[];
   onSendMessage?: (
     text: string,
@@ -89,6 +90,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
   dailyNutrition,
   onUpdateDailyNutrition,
   onUpdateHomework,
+  onUpdateClientAvatar,
   messages = [],
   onSendMessage,
   onSignOut,
@@ -106,6 +108,46 @@ export const ClientView: React.FC<ClientViewProps> = ({
 
   // Chat input state
   const [chatText, setChatText] = useState('');
+
+  // Hidden file input for client profile photo upload
+  const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUpdateClientAvatar) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== 'string') return;
+
+      // Resize/compress to 256x256 square so it stores cleanly in localStorage
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 256;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const minSide = Math.min(img.width, img.height);
+          const sx = (img.width - minSide) / 2;
+          const sy = (img.height - minSide) / 2;
+          ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          onUpdateClientAvatar(compressedDataUrl);
+        } else {
+          onUpdateClientAvatar(result);
+        }
+      };
+      img.onerror = () => {
+        onUpdateClientAvatar(result);
+      };
+      img.src = result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const activeDayWorkout = getOrCreateDayWorkout(workouts, selectedDate);
 
@@ -202,12 +244,12 @@ export const ClientView: React.FC<ClientViewProps> = ({
   const isWorkoutCompleted = getWorkoutStatus(activeDayWorkout) === 'Completed';
 
   return (
-    <div className="w-full max-w-2xl mx-auto min-h-[calc(100vh-120px)] flex flex-col bg-[#f4f5f7] rounded-3xl overflow-hidden border border-neutral-200/90 shadow-sm relative">
+    <div className="w-full max-w-2xl mx-auto flex-1 min-h-0 flex flex-col bg-[#f4f5f7] rounded-3xl overflow-hidden border border-neutral-200/90 shadow-sm relative">
       {/* =========================================================
           TAB 1: TODAY'S WORKOUT (Read-Only Trainer Prescription)
          ========================================================= */}
       {bottomTab === 'today' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7]">
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] overflow-hidden">
           {/* Top Amber Bar with Clean Circular White Avatar */}
           <div className="bg-amber-400 px-4 py-3.5 text-black shrink-0">
             <div className="flex items-center justify-between gap-2">
@@ -225,8 +267,16 @@ export const ClientView: React.FC<ClientViewProps> = ({
               )}
 
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-full bg-white text-neutral-900 font-bold text-xs flex items-center justify-center shadow-xs shrink-0">
-                  {getInitials(client.name)}
+                <div className="w-9 h-9 rounded-full bg-white text-neutral-900 font-bold text-xs flex items-center justify-center shadow-xs shrink-0 overflow-hidden">
+                  {client.avatarUrl ? (
+                    <img
+                      src={client.avatarUrl}
+                      alt={client.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    getInitials(client.name)
+                  )}
                 </div>
                 <div className="min-w-0 text-left">
                   <div className="font-bold text-sm sm:text-base text-black truncate">
@@ -251,7 +301,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
           </div>
 
           {/* Clean Exercise Cards (Strictly What Trainer Assigned — No Edit Button) */}
-          <div className="flex-1 p-4 space-y-3 overflow-y-auto">
+          <div className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto">
             {activeDayWorkout.exercises.length === 0 ? (
               <div className="bg-white rounded-3xl p-8 text-center border border-neutral-200/70 my-6">
                 <p className="text-sm font-medium text-neutral-500">
@@ -351,7 +401,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
           TAB 2: WORKOUTS SCHEDULE
          ========================================================= */}
       {bottomTab === 'workouts' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7]">
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] overflow-hidden">
           <div className="bg-white p-3.5 border-b border-neutral-200/80 shrink-0">
             <div className="border border-neutral-200 rounded-full px-4 py-2.5 flex items-center justify-between bg-white">
               <span className="text-xs sm:text-sm font-medium text-neutral-700 truncate">
@@ -361,7 +411,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+          <div className="flex-1 min-h-0 p-4 space-y-4 overflow-y-auto">
             {clientWorkoutDays.map((day) => {
               const status = getWorkoutStatus(day);
               const isCompleted = status === 'Completed';
@@ -415,7 +465,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
           TAB 3: DAILY HABITS & NUTRITION
          ========================================================= */}
       {bottomTab === 'habits' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7] p-4 space-y-5 overflow-y-auto">
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] p-4 space-y-5 overflow-y-auto">
           <div className="space-y-2">
             <div className="text-center text-xs font-bold text-neutral-500">
               Daily Habits
@@ -529,7 +579,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
           TAB 4: DIRECT CHAT WITH COACH
          ========================================================= */}
       {bottomTab === 'messages' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7]">
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] overflow-hidden">
           <div className="bg-amber-400 px-4 py-3.5 flex items-center justify-center text-black shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 rounded-full bg-white text-neutral-900 font-bold text-xs flex items-center justify-center shadow-xs shrink-0">
@@ -541,7 +591,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 p-4 overflow-y-auto flex flex-col justify-center">
+          <div className="flex-1 min-h-0 p-4 overflow-y-auto flex flex-col justify-center">
             {messages.length === 0 ? (
               <div className="my-auto flex flex-col items-center justify-center py-10">
                 <p className="text-neutral-400 font-bold text-sm">
@@ -624,15 +674,49 @@ export const ClientView: React.FC<ClientViewProps> = ({
       )}
 
       {/* =========================================================
-          TAB 5: CLIENT ACCOUNT (Read-Only Assigned Info & Navigation)
+          TAB 5: CLIENT ACCOUNT (Client Can Upload Their Profile Photo Here)
          ========================================================= */}
       {bottomTab === 'account' && (
-        <div className="flex-1 flex flex-col bg-[#f4f5f7]">
-          {/* Top Amber Profile Banner with Clean White Circular Avatar */}
+        <div className="flex-1 min-h-0 flex flex-col bg-[#f4f5f7] overflow-hidden">
+          <input
+            ref={avatarFileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarFileChange}
+            className="hidden"
+          />
+
+          {/* Top Amber Profile Banner with Uploadable Circular Avatar */}
           <div className="bg-amber-400 px-5 py-5 flex items-center gap-3.5 text-black shrink-0">
-            <div className="w-14 h-14 rounded-full bg-white text-neutral-900 font-black text-base flex items-center justify-center shadow-sm shrink-0">
-              {getInitials(client.name)}
-            </div>
+            <button
+              type="button"
+              onClick={() => avatarFileInputRef.current?.click()}
+              className="relative w-16 h-16 rounded-full bg-white border border-neutral-300/80 text-neutral-900 font-black text-base flex items-center justify-center shadow-sm shrink-0 cursor-pointer group"
+              title="Upload profile photo"
+            >
+              <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                {client.avatarUrl ? (
+                  <img
+                    src={client.avatarUrl}
+                    alt={client.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <svg
+                    viewBox="0 0 64 64"
+                    className="w-12 h-12 text-neutral-300 mt-2"
+                    fill="currentColor"
+                  >
+                    <circle cx="32" cy="22" r="11" />
+                    <path d="M12 58c0-11 9-19 20-19s20 8 20 19H12z" />
+                  </svg>
+                )}
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-[#252a36] text-amber-400 flex items-center justify-center shadow-xs border-2 border-white">
+                <Camera className="w-3 h-3 stroke-[2.2]" />
+              </span>
+            </button>
+
             <div className="min-w-0 flex-1">
               <h2 className="font-extrabold text-lg text-black tracking-tight truncate">
                 {client.name}
@@ -644,7 +728,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
           </div>
 
           {/* Minimal Navigation Rows */}
-          <div className="p-4 flex-1 flex flex-col justify-between space-y-5">
+          <div className="p-4 flex-1 min-h-0 overflow-y-auto flex flex-col justify-between space-y-5">
             <div className="bg-white rounded-3xl shadow-2xs border border-neutral-200/70 divide-y divide-neutral-200/70 overflow-hidden">
               {[
                 {
