@@ -520,16 +520,16 @@ export default function App() {
       <>
         {showSplash && (
           <div
-            className={`fixed inset-0 z-50 flex items-center justify-center bg-[#232328] px-6 transition-all duration-300 ease-out ${
+            className={`fixed inset-0 z-50 flex items-center justify-center bg-[#232328] px-8 transition-all duration-300 ease-out ${
               isSplashFading
                 ? 'opacity-0 scale-[1.03] pointer-events-none'
                 : 'opacity-100 scale-100'
             }`}
           >
-            <img
-              src="/assets/aistudio/e5685ed9-a821-4018-a4d5-65b77ca837e3_698af197.JPG"
-              alt="Pure Function Fitness Center"
-              className="w-full max-w-[380px] sm:max-w-[500px] md:max-w-[580px] h-auto object-contain select-none"
+            <PureFunctionLogo
+              theme="dark"
+              variant="badge"
+              className="w-full max-w-[340px] sm:max-w-[460px] md:max-w-[540px]"
             />
           </div>
         )}
