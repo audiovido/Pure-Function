@@ -383,8 +383,17 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
 
   // Clipboard for copying & pasting workouts between days
   const [copiedWorkout, setCopiedWorkout] = useState<TrueCoachDayWorkoutCard | null>(null);
-  // Moving workout modal state
+  // Moving workout / exercise(s) modal state
   const [movingWorkout, setMovingWorkout] = useState<TrueCoachDayWorkoutCard | null>(null);
+  const [movingExerciseIds, setMovingExerciseIds] = useState<string[]>([]);
+  const [moveModalWeekIso, setMoveModalWeekIso] = useState<string>('2026-10-23');
+  // Drag-and-drop state for moving a workout or single exercise to another day column
+  const [draggedMoveItem, setDraggedMoveItem] = useState<{
+    workoutId: string;
+    exerciseIds: string[];
+    label: string;
+  } | null>(null);
+  const [dragOverDateIso, setDragOverDateIso] = useState<string | null>(null);
   // Editing / Adding workout modal state
   const [editingWorkout, setEditingWorkout] = useState<TrueCoachDayWorkoutCard | null>(null);
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState('');
@@ -614,15 +623,126 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
     });
   };
 
-  const handleMoveWorkoutToDate = (targetDateIso: string) => {
-    if (!movingWorkout) return;
+  const openMoveModal = (
+    workout: TrueCoachDayWorkoutCard,
+    preselectedExerciseIds?: string[]
+  ) => {
+    setMovingWorkout(workout);
+    setMovingExerciseIds(
+      preselectedExerciseIds && preselectedExerciseIds.length > 0
+        ? preselectedExerciseIds
+        : workout.exercises.map((ex) => ex.id)
+    );
+    setMoveModalWeekIso(workout.dateIso || currentWeekDateIso);
+  };
+
+  const moveModalWeekDays = useMemo(() => {
+    const monday = getMondayOfWeek(moveModalWeekIso);
+    const dayLabels = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    const list = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const iso = formatIso(d);
+      list.push({
+        iso,
+        dayName: dayLabels[i],
+        dayNumber: d.getDate(),
+        monthShort: d.toLocaleDateString('en-US', { month: 'short' }),
+        isToday: iso === TODAY_ISO,
+      });
+    }
+    return list;
+  }, [moveModalWeekIso]);
+
+  const shiftMoveModalWeek = (deltaDays: number) => {
+    const [y, m, d] = moveModalWeekIso.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() + deltaDays);
+    setMoveModalWeekIso(formatIso(dt));
+  };
+
+  const handleMoveWorkoutToDate = (
+    targetDateIso: string,
+    overrideSourceWorkout?: TrueCoachDayWorkoutCard,
+    overrideExerciseIds?: string[]
+  ) => {
+    const sourceWk = overrideSourceWorkout || movingWorkout;
+    if (!sourceWk) return;
+    if (targetDateIso === sourceWk.dateIso) {
+      setMovingWorkout(null);
+      setMovingExerciseIds([]);
+      return;
+    }
+
+    const idsToMove =
+      overrideExerciseIds && overrideExerciseIds.length > 0
+        ? overrideExerciseIds
+        : movingExerciseIds.length > 0
+        ? movingExerciseIds
+        : sourceWk.exercises.map((ex) => ex.id);
+
+    const exercisesToMove = sourceWk.exercises.filter((ex) =>
+      idsToMove.includes(ex.id)
+    );
+    if (exercisesToMove.length === 0) return;
+
+    const remainingExercises = sourceWk.exercises.filter(
+      (ex) => !idsToMove.includes(ex.id)
+    );
+
     updateClientWorkouts((prev) => {
-      const withoutSource = prev.filter(
-        (w) => w.id !== movingWorkout.id && w.dateIso !== targetDateIso
-      );
-      return [...withoutSource, { ...movingWorkout, dateIso: targetDateIso }];
+      const targetExisting = prev.find((w) => w.dateIso === targetDateIso);
+      let nextList: TrueCoachDayWorkoutCard[] = [];
+
+      // 1. Update or remove the source workout
+      for (const w of prev) {
+        if (w.id === sourceWk.id) {
+          if (remainingExercises.length > 0) {
+            nextList.push({
+              ...w,
+              exercises: remainingExercises,
+            });
+          }
+        } else if (targetExisting && w.id === targetExisting.id) {
+          // Will be replaced with merged target workout below
+          continue;
+        } else {
+          nextList.push(w);
+        }
+      }
+
+      // 2. Append moved exercises to target day's workout or create a new workout on target day
+      if (targetExisting) {
+        nextList.push({
+          ...targetExisting,
+          exercises: [
+            ...targetExisting.exercises,
+            ...exercisesToMove.map((ex, idx) => ({
+              ...ex,
+              id: `${ex.id}-mv-${Date.now()}-${idx}`,
+            })),
+          ],
+        });
+      } else {
+        nextList.push({
+          id:
+            remainingExercises.length === 0
+              ? sourceWk.id
+              : `tc-wk-${Date.now()}`,
+          dateIso: targetDateIso,
+          title: sourceWk.title || 'Workout',
+          status:
+            remainingExercises.length === 0 ? sourceWk.status : 'scheduled',
+          exercises: exercisesToMove,
+        });
+      }
+
+      return nextList;
     });
+
     setMovingWorkout(null);
+    setMovingExerciseIds([]);
   };
 
   const handleCycleExerciseStatus = (
@@ -1195,8 +1315,39 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                   return (
                     <div
                       key={day.iso}
+                      onDragOver={(e) => {
+                        if (draggedMoveItem) {
+                          e.preventDefault();
+                          if (dragOverDateIso !== day.iso) {
+                            setDragOverDateIso(day.iso);
+                          }
+                        }
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverDateIso === day.iso) {
+                          setDragOverDateIso(null);
+                        }
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragOverDateIso(null);
+                        if (!draggedMoveItem) return;
+                        const srcWk = clientWorkouts.find(
+                          (w) => w.id === draggedMoveItem.workoutId
+                        );
+                        if (srcWk && srcWk.dateIso !== day.iso) {
+                          handleMoveWorkoutToDate(
+                            day.iso,
+                            srcWk,
+                            draggedMoveItem.exerciseIds
+                          );
+                        }
+                        setDraggedMoveItem(null);
+                      }}
                       className={`flex flex-col min-h-[540px] border-r border-neutral-300 last:border-r-0 transition-colors ${
-                        day.isToday
+                        dragOverDateIso === day.iso
+                          ? 'bg-amber-50/90 ring-2 ring-amber-400 z-20'
+                          : day.isToday
                           ? 'bg-white ring-2 ring-[#3b82f6] z-10'
                           : 'bg-[#f4f5f7]/70'
                       }`}
@@ -1263,10 +1414,23 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                         {dayWorkouts.length === 0 ? (
                           <div
                             onClick={() => handleOpenAddWorkoutForDay(day.iso)}
-                            className="h-full min-h-[180px] rounded-lg border border-transparent hover:border-dashed hover:border-neutral-300 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer text-neutral-400 text-xs gap-1"
+                            className={`h-full min-h-[180px] rounded-lg border flex flex-col items-center justify-center transition-all cursor-pointer text-xs gap-1 ${
+                              dragOverDateIso === day.iso
+                                ? 'border-dashed border-amber-500 bg-amber-100/50 opacity-100 text-amber-800 font-bold'
+                                : 'border-transparent hover:border-dashed hover:border-neutral-300 opacity-0 hover:opacity-100 text-neutral-400'
+                            }`}
                           >
-                            <Plus className="w-4 h-4" />
-                            <span>Add Workout</span>
+                            {dragOverDateIso === day.iso ? (
+                              <>
+                                <Move className="w-4 h-4" />
+                                <span>Drop to Move to {day.dayName} {day.dayNumber}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="w-4 h-4" />
+                                <span>Add Workout</span>
+                              </>
+                            )}
                           </div>
                         ) : (
                           dayWorkouts.map((workout) => {
@@ -1335,12 +1499,29 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                                     </button>
                                     <button
                                       type="button"
+                                      draggable
+                                      onDragStart={(e) => {
+                                        e.stopPropagation();
+                                        setDraggedMoveItem({
+                                          workoutId: workout.id,
+                                          exerciseIds: workout.exercises.map((ex) => ex.id),
+                                          label: workout.title,
+                                        });
+                                      }}
+                                      onDragEnd={() => {
+                                        setDraggedMoveItem(null);
+                                        setDragOverDateIso(null);
+                                      }}
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setMovingWorkout(workout);
+                                        openMoveModal(workout);
                                       }}
-                                      className="p-1 rounded hover:bg-neutral-100 hover:text-neutral-800 cursor-pointer"
-                                      title="Move Workout to another day"
+                                      className={`p-1 rounded transition-colors cursor-pointer ${
+                                        movingWorkout?.id === workout.id
+                                          ? 'bg-amber-400 text-black'
+                                          : 'hover:bg-amber-400/30 hover:text-neutral-900'
+                                      }`}
+                                      title="Move exercise(s) or workout to another day (Click or Drag to another day)"
                                     >
                                       <Move className="w-3.5 h-3.5" />
                                     </button>
@@ -1350,7 +1531,23 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                                 {/* Vertical Timeline Exercise List */}
                                 <div className="relative pl-4 space-y-3 before:content-[''] before:absolute before:left-[6px] before:top-2 before:bottom-2 before:w-[1.5px] before:bg-neutral-200">
                                   {workout.exercises.map((ex) => (
-                                    <div key={ex.id} className="relative text-[11px] leading-snug">
+                                    <div
+                                      key={ex.id}
+                                      draggable
+                                      onDragStart={(e) => {
+                                        e.stopPropagation();
+                                        setDraggedMoveItem({
+                                          workoutId: workout.id,
+                                          exerciseIds: [ex.id],
+                                          label: `${ex.orderLabel}) ${ex.name}`,
+                                        });
+                                      }}
+                                      onDragEnd={() => {
+                                        setDraggedMoveItem(null);
+                                        setDragOverDateIso(null);
+                                      }}
+                                      className="group/ex relative text-[11px] leading-snug"
+                                    >
                                       {/* Status Indicator Node on Timeline (✓ green, ✕ red, • dark) */}
                                       <button
                                         type="button"
@@ -1371,9 +1568,22 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                                         )}
                                       </button>
 
-                                      {/* Exercise Order + Name */}
-                                      <div className="font-bold text-neutral-800 break-words">
-                                        {ex.orderLabel}) {ex.name}
+                                      {/* Exercise Order + Name + Quick Move Single Exercise Button */}
+                                      <div className="flex items-start justify-between gap-1">
+                                        <div className="font-bold text-neutral-800 break-words">
+                                          {ex.orderLabel}) {ex.name}
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openMoveModal(workout, [ex.id]);
+                                          }}
+                                          className="opacity-0 group-hover/ex:opacity-100 p-0.5 rounded text-neutral-400 hover:text-black hover:bg-amber-400/40 transition-all shrink-0 cursor-pointer"
+                                          title={`Move "${ex.name}" to another day`}
+                                        >
+                                          <Move className="w-3 h-3" />
+                                        </button>
                                       </div>
 
                                       {/* Exercise Prescription Details */}
@@ -2513,45 +2723,191 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
       )}
 
       {/* =========================================================
-          MODAL 2: MOVE WORKOUT TO ANOTHER DAY
+          MODAL 2: MOVE EXERCISE(S) OR WORKOUT TO ANOTHER DAY
          ========================================================= */}
       {movingWorkout && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
-          onClick={() => setMovingWorkout(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => {
+            setMovingWorkout(null);
+            setMovingExerciseIds([]);
+          }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-neutral-200 overflow-hidden"
+            className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col max-h-[88vh]"
           >
-            <div className="bg-amber-400 px-5 py-3.5 flex items-center justify-between text-black">
-              <span className="font-extrabold text-sm">Move Workout to Day</span>
+            {/* Header */}
+            <div className="bg-[#252a36] px-5 py-4 flex items-center justify-between text-white">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-400 text-black flex items-center justify-center shrink-0">
+                  <Move className="w-4 h-4 stroke-[2.5]" />
+                </div>
+                <div>
+                  <div className="font-extrabold text-sm">
+                    Move Exercise to Other Days
+                  </div>
+                  <div className="text-[11px] text-neutral-300">
+                    From {movingWorkout.dateIso} • Select exercise(s) & destination day
+                  </div>
+                </div>
+              </div>
               <button
                 type="button"
-                onClick={() => setMovingWorkout(null)}
-                className="p-1 rounded-full hover:bg-black/10 cursor-pointer"
+                onClick={() => {
+                  setMovingWorkout(null);
+                  setMovingExerciseIds([]);
+                }}
+                className="p-1.5 rounded-full hover:bg-white/10 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-4 space-y-2">
-              {weekDays.map((d) => (
-                <button
-                  key={d.iso}
-                  type="button"
-                  onClick={() => handleMoveWorkoutToDate(d.iso)}
-                  className={`w-full px-4 py-2.5 rounded-xl text-left text-xs font-bold flex items-center justify-between cursor-pointer ${
-                    d.iso === movingWorkout.dateIso
-                      ? 'bg-neutral-900 text-amber-400'
-                      : 'bg-neutral-100 hover:bg-amber-400/30 text-neutral-800'
-                  }`}
-                >
-                  <span>
-                    {d.dayName} {d.dayNumber} ({d.iso})
+
+            <div className="p-5 overflow-y-auto space-y-4">
+              {/* Step 1: Select which Exercise(s) to move */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-neutral-500">
+                    1. Select Exercise(s) to Move ({movingExerciseIds.length}/
+                    {movingWorkout.exercises.length})
                   </span>
-                  {d.iso === movingWorkout.dateIso && <span>Current</span>}
-                </button>
-              ))}
+                  <div className="flex items-center gap-2 text-[11px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMovingExerciseIds(
+                          movingWorkout.exercises.map((ex) => ex.id)
+                        )
+                      }
+                      className="text-amber-600 hover:underline cursor-pointer"
+                    >
+                      All
+                    </button>
+                    <span className="text-neutral-300">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setMovingExerciseIds([])}
+                      className="text-neutral-500 hover:underline cursor-pointer"
+                    >
+                      None
+                    </button>
+                  </div>
+                </div>
+
+                <div className="max-h-44 overflow-y-auto rounded-2xl border border-neutral-200 divide-y divide-neutral-100 bg-[#f9fafb]">
+                  {movingWorkout.exercises.map((ex) => {
+                    const isSelected = movingExerciseIds.includes(ex.id);
+                    return (
+                      <label
+                        key={ex.id}
+                        className={`px-3.5 py-2.5 flex items-center gap-3 text-xs cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-amber-50/90 font-bold text-neutral-900'
+                            : 'hover:bg-neutral-100/70 text-neutral-600'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            setMovingExerciseIds((prev) =>
+                              prev.includes(ex.id)
+                                ? prev.filter((id) => id !== ex.id)
+                                : [...prev, ex.id]
+                            );
+                          }}
+                          className="w-4 h-4 rounded border-neutral-300 accent-amber-400 cursor-pointer shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate">
+                            <span className="font-black text-neutral-900">
+                              {ex.orderLabel})
+                            </span>{' '}
+                            {ex.name}
+                          </div>
+                          <div className="text-[10px] text-neutral-400 font-medium">
+                            Sets: {ex.sets} • Reps: {ex.reps}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Step 2: Choose Destination Day */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-neutral-500">
+                    2. Choose Destination Day
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => shiftMoveModalWeek(-7)}
+                      className="p-1 rounded-lg border border-neutral-200 hover:bg-neutral-100 text-neutral-700 cursor-pointer"
+                      title="Previous Week"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => shiftMoveModalWeek(7)}
+                      className="p-1 rounded-lg border border-neutral-200 hover:bg-neutral-100 text-neutral-700 cursor-pointer"
+                      title="Next Week"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  {moveModalWeekDays.map((d) => {
+                    const isCurrentDay = d.iso === movingWorkout.dateIso;
+                    const existingOnDay = clientWorkouts.find(
+                      (w) => w.dateIso === d.iso
+                    );
+                    return (
+                      <button
+                        key={d.iso}
+                        type="button"
+                        disabled={isCurrentDay || movingExerciseIds.length === 0}
+                        onClick={() => handleMoveWorkoutToDate(d.iso)}
+                        className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-bold flex items-center justify-between transition-colors ${
+                          isCurrentDay
+                            ? 'bg-neutral-900 text-amber-400 cursor-default'
+                            : movingExerciseIds.length === 0
+                            ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed'
+                            : 'bg-neutral-100 hover:bg-amber-400 text-neutral-800 hover:text-black cursor-pointer'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-black">
+                            {d.dayName}, {d.monthShort} {d.dayNumber}
+                          </span>
+                          <span className="text-[10px] opacity-70">({d.iso})</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {isCurrentDay ? (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-black">
+                              Current Day
+                            </span>
+                          ) : existingOnDay ? (
+                            <span className="px-2 py-0.5 rounded-full bg-white/80 text-neutral-700 text-[10px] font-semibold">
+                              +{existingOnDay.exercises.length} exercises (Merge)
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-extrabold">
+                              Move here →
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>
