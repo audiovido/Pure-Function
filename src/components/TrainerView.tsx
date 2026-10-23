@@ -41,6 +41,10 @@ import {
   formatDateRangeLabel,
   formatShortDateLabel,
 } from './DateRangeCalendarModal';
+import {
+  DesktopPrimaryNav,
+  TrainerDesktopWorkspace,
+} from './TrainerDesktopWorkspace';
 
 export type TrainerBottomTab =
   | 'dashboard'
@@ -92,6 +96,7 @@ interface TrainerViewProps {
   onSignOut?: () => void;
   activeBottomTab?: TrainerBottomTab;
   onBottomTabChange?: (tab: TrainerBottomTab) => void;
+  onDesktopSectionLabelChange?: (label: string) => void;
   theme?: ThemeMode;
 }
 
@@ -184,9 +189,11 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
   onSignOut,
   activeBottomTab = 'dashboard',
   onBottomTabChange,
+  onDesktopSectionLabelChange,
 }) => {
   const [internalTab, setInternalTab] = useState<TrainerBottomTab>('dashboard');
   const bottomTab = onBottomTabChange ? activeBottomTab : internalTab;
+  const [desktopNav, setDesktopNav] = useState<DesktopPrimaryNav>('clients');
 
   const [subScreen, setSubScreen] = useState<SubScreen>('none');
   const [workoutsBackTarget, setWorkoutsBackTarget] = useState<
@@ -345,9 +352,63 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
     } else {
       setInternalTab(tab);
     }
+    if (
+      tab === 'clients' ||
+      tab === 'activity' ||
+      tab === 'messages' ||
+      tab === 'account'
+    ) {
+      setDesktopNav(tab);
+    }
+    if (onDesktopSectionLabelChange) {
+      const labelMap: Record<TrainerBottomTab, string> = {
+        dashboard: 'Dashboard',
+        clients: 'Clients',
+        activity: 'Activity',
+        messages: 'Messages',
+        account: 'Account',
+      };
+      onDesktopSectionLabelChange(labelMap[tab]);
+    }
     setSubScreen('none');
     setShowSearch(false);
     setSearchQuery('');
+  };
+
+  const handleSelectDesktopNav = (nav: DesktopPrimaryNav) => {
+    setDesktopNav(nav);
+    setSubScreen('none');
+    setShowSearch(false);
+    setSearchQuery('');
+
+    if (
+      nav === 'clients' ||
+      nav === 'activity' ||
+      nav === 'messages' ||
+      nav === 'account'
+    ) {
+      if (onBottomTabChange) {
+        onBottomTabChange(nav);
+      } else {
+        setInternalTab(nav);
+      }
+    }
+
+    if (onDesktopSectionLabelChange) {
+      const desktopLabels: Record<DesktopPrimaryNav, string> = {
+        clients: 'Clients',
+        library: 'Library',
+        programs: 'Programs',
+        payments: 'Payments',
+        referrals: 'Referrals',
+        teams: 'Teams',
+        marketing: 'Marketing',
+        activity: 'Activity',
+        messages: 'Messages',
+        account: 'Account',
+      };
+      onDesktopSectionLabelChange(desktopLabels[nav]);
+    }
   };
 
   const handleSendChat = (e: React.FormEvent) => {
@@ -466,8 +527,39 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
     };
   }, [clientWorkoutDays, selectedClient]);
 
+  const unreadActivityCount = React.useMemo(
+    () =>
+      Math.max(
+        1,
+        activityItems.filter((item) => !readActivityIds.includes(item.id)).length
+      ),
+    [activityItems, readActivityIds]
+  );
+
   return (
-    <div className="w-full max-w-2xl mx-auto flex-1 min-h-0 flex flex-col bg-[#f4f5f7] rounded-3xl overflow-hidden border border-neutral-200/90 shadow-sm relative">
+    <div className="w-full max-w-2xl md:max-w-none mx-auto flex-1 min-h-0 flex flex-col bg-[#f4f5f7] rounded-3xl md:rounded-none overflow-hidden border border-neutral-200/90 md:border-0 shadow-sm md:shadow-none relative">
+      <TrainerDesktopWorkspace
+        clients={clients}
+        selectedClientId={selectedClientId}
+        onSelectClient={onSelectClient}
+        onOpenClientProfile={(clientId) => openClientProfile(clientId)}
+        onOpenClientWorkouts={(clientId) => openClientWorkouts(clientId, 'none')}
+        onOpenDirectChat={(clientId) => openDirectChat(clientId, 'none')}
+        onOpenEditClient={(client) => openEditClientScreen(client)}
+        onOpenClientManager={onOpenClientManager}
+        onUpdateClient={onUpdateClient}
+        onOpenVideo={onOpenVideo}
+        onAddExerciseClick={onAddExerciseClick}
+        allClientWorkouts={allClientWorkouts}
+        activeAccount={activeAccount}
+        onSignOut={onSignOut}
+        activeNav={desktopNav}
+        onSelectNav={handleSelectDesktopNav}
+        hasActiveSubScreen={subScreen !== 'none'}
+        onClearSubScreen={() => setSubScreen('none')}
+        unreadActivityCount={unreadActivityCount}
+      >
+        <div className="w-full md:max-w-3xl md:mx-auto md:my-4 flex-1 min-h-0 flex flex-col bg-[#f4f5f7] md:rounded-3xl md:border md:border-neutral-200/90 md:shadow-xs overflow-hidden">
       {/* =========================================================
           SUB-SCREEN A: CLIENT PROFILE (Inspired by IMG_3524)
          ========================================================= */}
@@ -1809,13 +1901,15 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
           </div>
         </div>
       )}
+        </div>
+      </TrainerDesktopWorkspace>
 
       {/* =========================================================
-          BOTTOM NAVIGATION BAR (5 Minimal Tabs)
+          BOTTOM NAVIGATION BAR (5 Minimal Tabs — Mobile Only, Locked at Bottom)
          ========================================================= */}
       <nav
         aria-label="Trainer bottom navigation"
-        className="shrink-0 bg-white border-t border-neutral-200 px-2 py-2 grid grid-cols-5 z-30"
+        className="md:hidden shrink-0 bg-white border-t border-neutral-200 px-2 py-2 grid grid-cols-5 z-30"
       >
         <button
           type="button"

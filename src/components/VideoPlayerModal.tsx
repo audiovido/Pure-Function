@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Play, Video, CheckCircle2, ExternalLink, Edit3, Save } from 'lucide-react';
 import { Exercise, ThemeMode } from '../types';
+import { TRUECOACH_EXERCISE_LIBRARY } from '../data/trueCoachExerciseLibrary';
 
 interface VideoPlayerModalProps {
   exercise: Exercise | null;
@@ -39,11 +40,37 @@ const DEFAULT_VIDEO_MAP: Record<string, string> = {
 
 function getYouTubeIdForExercise(exercise: Exercise): string {
   if (exercise.youtubeId) return exercise.youtubeId;
+  const matchedLib = TRUECOACH_EXERCISE_LIBRARY.find(
+    (item) =>
+      item.id === exercise.id ||
+      item.name.toLowerCase() === exercise.name.toLowerCase()
+  );
+  if (matchedLib?.videoUrl) return matchedLib.videoUrl;
+
   const lower = exercise.name.toLowerCase();
   for (const [key, id] of Object.entries(DEFAULT_VIDEO_MAP)) {
     if (lower.includes(key)) return id;
   }
   return 'MeIiIdhvXT4'; // default high-quality demonstration
+}
+
+function resolveEmbedUrl(raw: string): string {
+  const trimmed = (raw || '').trim();
+  const vimeoMatch =
+    trimmed.match(/vimeo\.com\/(?:video\/)?(\d+)/i) ||
+    trimmed.match(/^(\d{7,11})$/);
+  if (vimeoMatch?.[1]) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&badge=0&autopause=0&player_id=0&app_id=58479`;
+  }
+  let ytId = trimmed;
+  if (trimmed.includes('v=')) {
+    ytId = trimmed.split('v=')[1]?.split('&')[0] || trimmed;
+  } else if (trimmed.includes('youtu.be/')) {
+    ytId = trimmed.split('youtu.be/')[1]?.split('?')[0] || trimmed;
+  } else if (trimmed.includes('embed/')) {
+    ytId = trimmed.split('embed/')[1]?.split('?')[0] || trimmed;
+  }
+  return `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&mute=0&rel=0&modestbranding=1`;
 }
 
 export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
@@ -207,10 +234,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         {activeTab === 'video' && (
           <div className="relative aspect-video bg-black overflow-hidden flex items-center justify-center">
             <iframe
-              src={`https://www.youtube-nocookie.com/embed/${currentYtId}?autoplay=1&mute=0&rel=0&modestbranding=1`}
+              src={resolveEmbedUrl(currentYtId)}
               title={`${exercise.name} Demonstration`}
               className="w-full h-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow="accelerometer; autoplay; fullscreen; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />
           </div>

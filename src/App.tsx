@@ -68,6 +68,8 @@ export default function App() {
 
   const [trainerBottomTab, setTrainerBottomTab] =
     useState<TrainerBottomTab>('dashboard');
+  const [trainerDesktopSectionLabel, setTrainerDesktopSectionLabel] =
+    useState<string>('Clients');
   const [clientBottomTab, setClientBottomTab] =
     useState<ClientBottomTab>('today');
 
@@ -568,6 +570,8 @@ export default function App() {
       ? sectionTitleMap[trainerBottomTab]
       : clientSectionTitleMap[clientBottomTab];
 
+  const isTrainerMode = isTrainerAccount && viewMode === 'trainer';
+
   return (
     <div
       className={`h-dvh overflow-hidden flex flex-col font-sans transition-colors duration-200 ${
@@ -583,7 +587,11 @@ export default function App() {
       */}
       <header className="shrink-0 sticky top-0 z-40 overflow-hidden bg-gradient-to-b from-[#2b303c] via-[#1d212b] to-[#14171f] border-b border-neutral-700/70 px-3 sm:px-6 py-2.5 shadow-[0_6px_18px_-4px_rgba(20,23,31,0.28),inset_0_1px_1px_rgba(255,255,255,0.14)]">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.07] to-transparent" />
-        <div className="relative z-10 max-w-6xl mx-auto flex items-center justify-between min-h-[42px] sm:min-h-[48px]">
+        <div
+          className={`relative z-10 mx-auto flex items-center justify-between min-h-[42px] sm:min-h-[48px] ${
+            isTrainerMode ? 'max-w-6xl md:max-w-none' : 'max-w-6xl'
+          }`}
+        >
           {/* Left: Pure Function Logo in White & Yellow */}
           <div className="flex items-center py-0.5">
             <PureFunctionLogo
@@ -594,13 +602,28 @@ export default function App() {
 
           {/* Right/Center: Yellow Box with Centered Black Font showing current section */}
           <div className="px-4 py-1.5 min-w-[110px] sm:min-w-[124px] rounded-xl bg-amber-400 text-black font-black text-xs sm:text-sm tracking-tight flex items-center justify-center text-center shadow-sm">
-            {activeHeaderTitle}
+            {isTrainerMode ? (
+              <>
+                <span className="md:hidden">{activeHeaderTitle}</span>
+                <span className="hidden md:inline">
+                  {trainerDesktopSectionLabel}
+                </span>
+              </>
+            ) : (
+              activeHeaderTitle
+            )}
           </div>
         </div>
       </header>
 
       {/* Main Content Area (Constrained to remaining viewport height so bottom footer stays locked) */}
-      <main className="flex-1 min-h-0 p-2 sm:p-4 max-w-6xl mx-auto w-full flex flex-col overflow-hidden">
+      <main
+        className={`flex-1 min-h-0 mx-auto w-full flex flex-col overflow-hidden ${
+          isTrainerMode
+            ? 'p-2 sm:p-4 md:p-0 max-w-6xl md:max-w-none'
+            : 'p-2 sm:p-4 max-w-6xl'
+        }`}
+      >
         {/* View Mode 1: Trainer View (TrueCoach Minimal Model) */}
         {isTrainerAccount && viewMode === 'trainer' && (
           <TrainerView
@@ -644,6 +667,7 @@ export default function App() {
             onSignOut={handleSignOut}
             activeBottomTab={trainerBottomTab}
             onBottomTabChange={setTrainerBottomTab}
+            onDesktopSectionLabelChange={setTrainerDesktopSectionLabel}
             theme={theme}
           />
         )}
