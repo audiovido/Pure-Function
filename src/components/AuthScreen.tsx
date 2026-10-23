@@ -330,10 +330,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   return (
     <div className="min-h-screen flex flex-col font-sans bg-white text-neutral-900">
       {/* Header: Soft Charcoal-Gray & Black gradient with subtle gray sheen & shadow (matching Client tile) */}
-      <header className="relative overflow-hidden bg-gradient-to-b from-[#2b303c] via-[#1d212b] to-[#14171f] border-b border-neutral-700/70 px-4 sm:px-6 py-2.5 shadow-[0_6px_18px_-4px_rgba(20,23,31,0.28),inset_0_1px_1px_rgba(255,255,255,0.14)]">
+      <header className="relative overflow-hidden bg-gradient-to-b from-[#2b303c] via-[#1d212b] to-[#14171f] border-b border-neutral-700/70 px-4 sm:px-6 py-1.5 sm:py-2 shadow-[0_6px_18px_-4px_rgba(20,23,31,0.28),inset_0_1px_1px_rgba(255,255,255,0.14)]">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.07] to-transparent" />
-        <div className="relative z-10 max-w-6xl mx-auto flex items-center justify-between min-h-[42px] sm:min-h-[48px]">
-          <PureFunctionLogo theme="dark" className="h-9 sm:h-11 md:h-12" />
+        <div className="relative z-10 max-w-6xl mx-auto flex items-center justify-center min-h-[34px] sm:min-h-[38px]">
+          <PureFunctionLogo theme="dark" className="h-7 sm:h-8 md:h-9" />
         </div>
       </header>
 

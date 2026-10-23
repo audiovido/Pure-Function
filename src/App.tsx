@@ -582,36 +582,41 @@ export default function App() {
     >
       {/* 
         HEADER:
-        Locked at the top of the viewport, with Pure Function logo in White & Yellow,
-        and a Yellow box with centered Black text showing the current section
+        Locked at the top of the viewport, with Pure Function logo centered in the frame,
+        and a Yellow box on the right with centered Black text showing the current section
       */}
-      <header className="shrink-0 sticky top-0 z-40 overflow-hidden bg-gradient-to-b from-[#2b303c] via-[#1d212b] to-[#14171f] border-b border-neutral-700/70 px-3 sm:px-6 py-2.5 shadow-[0_6px_18px_-4px_rgba(20,23,31,0.28),inset_0_1px_1px_rgba(255,255,255,0.14)]">
+      <header className="shrink-0 sticky top-0 z-40 overflow-hidden bg-gradient-to-b from-[#2b303c] via-[#1d212b] to-[#14171f] border-b border-neutral-700/70 px-3 sm:px-6 py-1.5 sm:py-2 shadow-[0_6px_18px_-4px_rgba(20,23,31,0.28),inset_0_1px_1px_rgba(255,255,255,0.14)]">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.07] to-transparent" />
         <div
-          className={`relative z-10 mx-auto flex items-center justify-between min-h-[42px] sm:min-h-[48px] ${
+          className={`relative z-10 mx-auto grid grid-cols-3 items-center min-h-[34px] sm:min-h-[38px] ${
             isTrainerMode ? 'max-w-6xl md:max-w-none' : 'max-w-6xl'
           }`}
         >
-          {/* Left: Pure Function Logo in White & Yellow */}
-          <div className="flex items-center py-0.5">
+          {/* Left Spacer to keep Center Logo dead-center in the frame */}
+          <div aria-hidden="true" />
+
+          {/* Center: Pure Function Logo in White & Yellow */}
+          <div className="flex items-center justify-center">
             <PureFunctionLogo
               theme="dark"
-              className="h-9 sm:h-11 md:h-12"
+              className="h-7 sm:h-8 md:h-9"
             />
           </div>
 
-          {/* Right/Center: Yellow Box with Centered Black Font showing current section */}
-          <div className="px-4 py-1.5 min-w-[110px] sm:min-w-[124px] rounded-xl bg-amber-400 text-black font-black text-xs sm:text-sm tracking-tight flex items-center justify-center text-center shadow-sm">
-            {isTrainerMode ? (
-              <>
-                <span className="md:hidden">{activeHeaderTitle}</span>
-                <span className="hidden md:inline">
-                  {trainerDesktopSectionLabel}
-                </span>
-              </>
-            ) : (
-              activeHeaderTitle
-            )}
+          {/* Right: Yellow Box with Centered Black Font showing current section */}
+          <div className="flex items-center justify-end">
+            <div className="px-3 sm:px-3.5 py-1 min-w-[92px] sm:min-w-[112px] rounded-lg bg-amber-400 text-black font-black text-[11px] sm:text-xs tracking-tight flex items-center justify-center text-center shadow-sm">
+              {isTrainerMode ? (
+                <>
+                  <span className="md:hidden">{activeHeaderTitle}</span>
+                  <span className="hidden md:inline">
+                    {trainerDesktopSectionLabel}
+                  </span>
+                </>
+              ) : (
+                activeHeaderTitle
+              )}
+            </div>
           </div>
         </div>
       </header>
