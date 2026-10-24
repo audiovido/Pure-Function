@@ -34,7 +34,11 @@ import {
   MacroTargets,
   ThemeMode,
 } from '../types';
-import { getOrCreateDayWorkout } from '../utils/dateUtils';
+import {
+  getOrCreateDayWorkout,
+  getTodayDateString,
+  addDaysToKey,
+} from '../utils/dateUtils';
 import {
   DateRangeCalendarModal,
   SingleDateCalendarModal,
@@ -463,8 +467,12 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
   }, [clients, allClientWorkouts]);
 
   // Interactive Calendar Modals state
-  const [dateRangeStart, setDateRangeStart] = useState<string>('2026-10-15');
-  const [dateRangeEnd, setDateRangeEnd] = useState<string>('2026-10-22');
+  const [dateRangeStart, setDateRangeStart] = useState<string>(() =>
+    addDaysToKey(getTodayDateString(), -7)
+  );
+  const [dateRangeEnd, setDateRangeEnd] = useState<string>(() =>
+    addDaysToKey(getTodayDateString(), 7)
+  );
   const [isDateRangeModalOpen, setIsDateRangeModalOpen] =
     useState<boolean>(false);
   const [isBirthdayModalOpen, setIsBirthdayModalOpen] =
@@ -496,14 +504,14 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
     ) {
       return 'Completed';
     }
-    if (day.date >= '2026-10-21') {
+    if (day.date >= getTodayDateString()) {
       return 'Pending';
     }
     return 'Missed';
   };
 
   const formatFullDateLabel = (dateStr: string): string => {
-    if (dateStr === '2026-10-21') return 'Today';
+    if (dateStr === getTodayDateString()) return 'Today';
     return formatShortDateLabel(dateStr);
   };
 
@@ -1400,7 +1408,9 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
                       </button>
                       <div className="text-xs text-neutral-500 mt-0.5 truncate">
                         {ex.sets} sets × {ex.reps}
-                        {ex.actualWeight ? ` · ${ex.actualWeight}` : ''}
+                        {ex.actualWeight || ex.actualReps
+                          ? ` · Logged ${ex.actualWeight || '—'} × ${ex.actualReps || '—'}`
+                          : ''}
                       </div>
                     </div>
                   </div>

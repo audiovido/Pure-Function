@@ -204,3 +204,12 @@ export function getOrCreateDayWorkout(
     exercises: [],
   };
 }
+
+/**
+ * Returns the YYYY-MM-DD key `delta` days away from `dateKey` (negative = past)
+ */
+export function addDaysToKey(dateKey: string, delta: number): string {
+  const d = parseDateKey(dateKey);
+  d.setDate(d.getDate() + delta);
+  return formatDateKey(d);
+}

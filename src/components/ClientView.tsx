@@ -23,7 +23,13 @@ import {
   Exercise,
   ThemeMode,
 } from '../types';
-import { getOrCreateDayWorkout } from '../utils/dateUtils';
+import { ExerciseResultLogger } from './ExerciseResultLogger';
+import { buildExerciseHistory, getExerciseSummary } from '../utils/progress';
+import {
+  getOrCreateDayWorkout,
+  getTodayDateString,
+  addDaysToKey,
+} from '../utils/dateUtils';
 import {
   DateRangeCalendarModal,
   formatDateRangeLabel,
@@ -90,6 +96,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
   selectedDate,
   onSelectDate,
   onToggleExerciseDone,
+  onLogExerciseResult,
   onCompleteSession,
   onOpenVideo,
   dailyNutrition,
@@ -167,10 +174,19 @@ export const ClientView: React.FC<ClientViewProps> = ({
   };
 
   // Interactive Calendar Modal state for Client Workouts tab
-  const [dateRangeStart, setDateRangeStart] = useState<string>('2026-10-15');
-  const [dateRangeEnd, setDateRangeEnd] = useState<string>('2026-10-22');
+  const [dateRangeStart, setDateRangeStart] = useState<string>(() =>
+    addDaysToKey(getTodayDateString(), -7)
+  );
+  const [dateRangeEnd, setDateRangeEnd] = useState<string>(() =>
+    addDaysToKey(getTodayDateString(), 7)
+  );
   const [isDateRangeModalOpen, setIsDateRangeModalOpen] =
     useState<boolean>(false);
+
+  const exerciseHistory = React.useMemo(
+    () => buildExerciseHistory(workouts),
+    [workouts]
+  );
 
   const workoutDatesList = React.useMemo(
     () => workouts.filter((d) => d.exercises.length > 0).map((d) => d.date),
@@ -198,14 +214,14 @@ export const ClientView: React.FC<ClientViewProps> = ({
     ) {
       return 'Completed';
     }
-    if (day.date >= '2026-10-21') {
+    if (day.date >= getTodayDateString()) {
       return 'Pending';
     }
     return 'Missed';
   };
 
   const formatFullDateLabel = (dateStr: string): string => {
-    if (dateStr === '2026-10-21') return 'Today';
+    if (dateStr === getTodayDateString()) return 'Today';
     return formatShortDateLabel(dateStr);
   };
 
@@ -363,6 +379,18 @@ export const ClientView: React.FC<ClientViewProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  {onLogExerciseResult && (
+                    <ExerciseResultLogger
+                      key={`${ex.id}-${ex.actualWeight ?? ''}-${ex.actualReps ?? ''}`}
+                      exercise={ex}
+                      summary={getExerciseSummary(exerciseHistory, ex.name, selectedDate)}
+                      defaultUnit={client.unitPreference === 'Metric system' ? 'kg' : 'lb'}
+                      onSave={(updates) =>
+                        onLogExerciseResult(selectedDate, ex.id, updates)
+                      }
+                    />
+                  )}
                 </div>
               ))
             )}

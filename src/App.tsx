@@ -47,6 +47,7 @@ import {
 } from './services/cloudSync';
 import { getCurrentAccount, signOutCloud } from './services/authService';
 import { isSupabaseConfigured } from './services/supabaseClient';
+import { getCompliance } from './utils/progress';
 import { PureFunctionLogo } from './components/PureFunctionLogo';
 import { AuthScreen } from './components/AuthScreen';
 import { TrainerView, TrainerBottomTab } from './components/TrainerView';
@@ -133,6 +134,27 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('pure_theme', theme);
   }, [theme]);
+
+  // Keep each client's 7/30/90-day compliance in sync with their real workout history
+  useEffect(() => {
+    const today = getTodayDateString();
+    setClients((prev) => {
+      let changed = false;
+      const next = prev.map((c) => {
+        const days = clientWorkoutsMap[c.id];
+        if (!days) return c;
+        const c7 = getCompliance(days, today, 7) ?? c.compliance7d;
+        const c30 = getCompliance(days, today, 30) ?? c.compliance30d;
+        const c90 = getCompliance(days, today, 90) ?? c.compliance90d;
+        if (c7 === c.compliance7d && c30 === c.compliance30d && c90 === c.compliance90d) {
+          return c;
+        }
+        changed = true;
+        return { ...c, compliance7d: c7, compliance30d: c30, compliance90d: c90 };
+      });
+      return changed ? next : prev;
+    });
+  }, [clientWorkoutsMap]);
 
   // Sync persistent stores to localStorage
   useEffect(() => {

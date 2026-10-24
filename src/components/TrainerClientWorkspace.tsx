@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { getTodayDateString } from '../utils/dateUtils';
 import {
   MessageSquare,
   Apple,
@@ -347,8 +348,8 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
   const [isClientSwitcherOpen, setIsClientSwitcherOpen] = useState(false);
 
   // Calendar reference date (defaults to Oct 23, 2026 as shown in screenshot)
-  const TODAY_ISO = '2026-10-23';
-  const [currentWeekDateIso, setCurrentWeekDateIso] = useState<string>('2026-10-23');
+  const TODAY_ISO = getTodayDateString();
+  const [currentWeekDateIso, setCurrentWeekDateIso] = useState<string>(getTodayDateString());
   const [calendarViewMode, setCalendarViewMode] = useState<'1week' | '2week' | 'skeleton'>('1week');
   const [isTodayDropdownOpen, setIsTodayDropdownOpen] = useState(false);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
@@ -386,7 +387,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
   // Moving workout / exercise(s) modal state
   const [movingWorkout, setMovingWorkout] = useState<TrueCoachDayWorkoutCard | null>(null);
   const [movingExerciseIds, setMovingExerciseIds] = useState<string[]>([]);
-  const [moveModalWeekIso, setMoveModalWeekIso] = useState<string>('2026-10-23');
+  const [moveModalWeekIso, setMoveModalWeekIso] = useState<string>(getTodayDateString());
   // Drag-and-drop state for moving a workout or single exercise to another day column
   const [draggedMoveItem, setDraggedMoveItem] = useState<{
     workoutId: string;
