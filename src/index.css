@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 @layer base {
+  html {
+    /* no double-tap zoom; taps respond immediately */
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background-color: #0d0f12;
@@ -47,4 +53,14 @@ input[type="range"]::-moz-range-thumb {
   cursor: pointer;
   border: none;
   box-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
+}
+
+/* Phones/tablets: iOS zooms into any focused field with text smaller than 16px.
+   Keep every form field at 16px there so tapping a field never zooms the app. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }

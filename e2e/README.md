@@ -19,3 +19,10 @@ Screenshot walkthroughs (no assertions; they print console errors and horizontal
 node walk-coach.cjs /tmp/dist-cloud /tmp/shots    # desktop: coach builds a workout, client sees it
 node walk-mobile.cjs /tmp/dist-cloud /tmp/shots   # phone: every coach tab
 ```
+
+Phone layout audit (overlapping/spilling/cut-off text, content wider than the screen, and form
+fields under 16px that make iOS zoom). Every screen should report 0 issues at every width:
+
+```bash
+for w in 320 360 375 390 414 430; do node layout-audit.cjs /tmp/dist-cloud /tmp/shots $w; done
+```

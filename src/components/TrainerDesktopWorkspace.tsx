@@ -1364,7 +1364,7 @@ export const TrainerDesktopWorkspace: React.FC<
                     <h1 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">
                       Clients
                     </h1>
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex flex-wrap items-center gap-2.5">
                       <button
                         type="button"
                         onClick={onOpenClientManager}
@@ -1638,7 +1638,7 @@ export const TrainerDesktopWorkspace: React.FC<
 
                     return (
                       <>
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <div className="flex items-center gap-2.5">
                               <h1 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">
@@ -1888,9 +1888,9 @@ export const TrainerDesktopWorkspace: React.FC<
 
                       <div className="bg-white rounded-2xl border border-neutral-200/90 shadow-2xs overflow-hidden">
                         <div className="bg-[#252a36] text-white px-4 py-3 grid grid-cols-12 items-center gap-3 text-xs font-bold">
-                          <div className="col-span-4">Name</div>
+                          <div className="col-span-5 sm:col-span-4">Name</div>
                           <div className="col-span-7">Instructions</div>
-                          <div className="col-span-1 text-right">From</div>
+                          <div className="hidden sm:block col-span-1 text-right">From</div>
                         </div>
 
                         <div className="divide-y divide-neutral-200/80">
@@ -1899,13 +1899,13 @@ export const TrainerDesktopWorkspace: React.FC<
                               key={wm.id}
                               className="px-4 py-4 grid grid-cols-12 items-start gap-3 hover:bg-neutral-50 transition-colors"
                             >
-                              <div className="col-span-4 font-bold text-xs sm:text-sm text-neutral-900">
+                              <div className="col-span-5 sm:col-span-4 font-bold text-xs sm:text-sm text-neutral-900">
                                 {wm.name}
                               </div>
                               <div className="col-span-7 text-xs sm:text-sm text-neutral-700 leading-relaxed">
                                 {wm.instructions}
                               </div>
-                              <div className="col-span-1 flex justify-end">
+                              <div className="hidden sm:flex col-span-1 justify-end">
                                 <PureFunctionCircleBadge size="sm" />
                               </div>
                             </div>
@@ -1941,9 +1941,9 @@ export const TrainerDesktopWorkspace: React.FC<
 
                       <div className="bg-white rounded-2xl border border-neutral-200/90 shadow-2xs overflow-hidden">
                         <div className="bg-[#252a36] text-white px-4 py-3 grid grid-cols-12 items-center gap-3 text-xs font-bold">
-                          <div className="col-span-4">Name</div>
+                          <div className="col-span-5 sm:col-span-4">Name</div>
                           <div className="col-span-7">Instructions</div>
-                          <div className="col-span-1 text-right">From</div>
+                          <div className="hidden sm:block col-span-1 text-right">From</div>
                         </div>
 
                         <div className="divide-y divide-neutral-200/80">
@@ -1952,13 +1952,13 @@ export const TrainerDesktopWorkspace: React.FC<
                               key={cd.id}
                               className="px-4 py-4 grid grid-cols-12 items-start gap-3 hover:bg-neutral-50 transition-colors"
                             >
-                              <div className="col-span-4 font-bold text-xs sm:text-sm text-neutral-900">
+                              <div className="col-span-5 sm:col-span-4 font-bold text-xs sm:text-sm text-neutral-900">
                                 {cd.name}
                               </div>
                               <div className="col-span-7 text-xs sm:text-sm text-neutral-700 leading-relaxed">
                                 {cd.instructions}
                               </div>
-                              <div className="col-span-1 flex justify-end">
+                              <div className="hidden sm:flex col-span-1 justify-end">
                                 <PureFunctionCircleBadge size="sm" />
                               </div>
                             </div>
@@ -1993,11 +1993,11 @@ export const TrainerDesktopWorkspace: React.FC<
 
                       <div className="bg-white rounded-2xl border border-neutral-200/90 shadow-2xs overflow-hidden">
                         <div className="bg-[#252a36] text-white px-4 py-3 grid grid-cols-12 items-center gap-3 text-xs font-bold">
-                          <div className="col-span-4">Name</div>
-                          <div className="col-span-3">Description</div>
-                          <div className="col-span-2"># Metrics</div>
-                          <div className="col-span-2"># Assignments</div>
-                          <div className="col-span-1 text-right">From</div>
+                          <div className="col-span-8 sm:col-span-4">Name</div>
+                          <div className="hidden sm:block col-span-3">Description</div>
+                          <div className="col-span-4 sm:col-span-2"># Metrics</div>
+                          <div className="hidden sm:block col-span-2"># Assignments</div>
+                          <div className="hidden sm:block col-span-1 text-right">From</div>
                         </div>
 
                         <div className="divide-y divide-neutral-200/80">
@@ -2006,19 +2006,19 @@ export const TrainerDesktopWorkspace: React.FC<
                               key={ms.id}
                               className="px-4 py-3.5 grid grid-cols-12 items-center gap-3 hover:bg-neutral-50 transition-colors"
                             >
-                              <div className="col-span-4 font-bold text-xs sm:text-sm text-neutral-900">
+                              <div className="col-span-8 sm:col-span-4 font-bold text-xs sm:text-sm text-neutral-900">
                                 {ms.name}
                               </div>
-                              <div className="col-span-3 text-xs text-neutral-500">
+                              <div className="hidden sm:block col-span-3 text-xs text-neutral-500">
                                 {ms.description}
                               </div>
-                              <div className="col-span-2 text-xs sm:text-sm font-semibold text-neutral-800 tabular-nums">
+                              <div className="col-span-4 sm:col-span-2 text-xs sm:text-sm font-semibold text-neutral-800 tabular-nums">
                                 {ms.metricsCount}
                               </div>
-                              <div className="col-span-2 text-xs sm:text-sm font-semibold text-neutral-800 tabular-nums">
+                              <div className="hidden sm:block col-span-2 text-xs sm:text-sm font-semibold text-neutral-800 tabular-nums">
                                 {ms.assignmentsCount}
                               </div>
-                              <div className="col-span-1 flex justify-end">
+                              <div className="hidden sm:flex col-span-1 justify-end">
                                 <PureFunctionCircleBadge size="sm" />
                               </div>
                             </div>
@@ -2054,10 +2054,10 @@ export const TrainerDesktopWorkspace: React.FC<
 
                       <div className="bg-white rounded-2xl border border-neutral-200/90 shadow-2xs overflow-hidden">
                         <div className="bg-[#252a36] text-white px-4 py-3 grid grid-cols-12 items-center gap-3 text-xs font-bold">
-                          <div className="col-span-6">Name</div>
-                          <div className="col-span-3">Shared with</div>
-                          <div className="col-span-2">Updated</div>
-                          <div className="col-span-1 text-right">From</div>
+                          <div className="col-span-8 sm:col-span-6">Name</div>
+                          <div className="hidden sm:block col-span-3">Shared with</div>
+                          <div className="col-span-4 sm:col-span-2">Updated</div>
+                          <div className="hidden sm:block col-span-1 text-right">From</div>
                         </div>
 
                         <div className="divide-y divide-neutral-200/80">
@@ -2066,16 +2066,16 @@ export const TrainerDesktopWorkspace: React.FC<
                               key={doc.id}
                               className="px-4 py-3.5 grid grid-cols-12 items-center gap-3 hover:bg-neutral-50 transition-colors"
                             >
-                              <div className="col-span-6 font-bold text-xs sm:text-sm text-neutral-900 truncate">
+                              <div className="col-span-8 sm:col-span-6 font-bold text-xs sm:text-sm text-neutral-900 truncate">
                                 {doc.name}
                               </div>
-                              <div className="col-span-3 text-xs text-neutral-600">
+                              <div className="hidden sm:block col-span-3 text-xs text-neutral-600">
                                 {doc.sharedWith}
                               </div>
-                              <div className="col-span-2 text-xs text-neutral-500">
+                              <div className="col-span-4 sm:col-span-2 text-xs text-neutral-500">
                                 {doc.updated}
                               </div>
-                              <div className="col-span-1 flex justify-end">
+                              <div className="hidden sm:flex col-span-1 justify-end">
                                 <PureFunctionCircleBadge size="sm" />
                               </div>
                             </div>
@@ -2148,8 +2148,8 @@ export const TrainerDesktopWorkspace: React.FC<
                         <span>Name</span>
                         <span className="text-[10px] text-amber-400">▲</span>
                       </div>
-                      <div className="col-span-2">Active</div>
-                      <div className="col-span-1">From</div>
+                      <div className="col-span-3 sm:col-span-2">Active</div>
+                      <div className="hidden sm:block col-span-1">From</div>
                       <div className="col-span-2 text-right" />
                     </div>
 
@@ -2218,12 +2218,12 @@ export const TrainerDesktopWorkspace: React.FC<
                             </div>
 
                             {/* Active Clients Count */}
-                            <div className="col-span-2 text-xs sm:text-sm font-semibold text-neutral-800 tabular-nums">
+                            <div className="col-span-3 sm:col-span-2 text-xs sm:text-sm font-semibold text-neutral-800 tabular-nums">
                               {prog.activeClients} clients
                             </div>
 
                             {/* From Badge */}
-                            <div className="col-span-1">
+                            <div className="hidden sm:block col-span-1">
                               <PureFunctionCircleBadge size="sm" />
                             </div>
 

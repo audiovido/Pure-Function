@@ -749,16 +749,8 @@ export default function App() {
           {/* Right: Yellow Box with Centered Black Font showing current section */}
           <div className="flex items-center justify-end">
             <div className="px-3 sm:px-3.5 py-1 min-w-[92px] sm:min-w-[112px] rounded-lg bg-amber-400 text-black font-black text-[11px] sm:text-xs tracking-tight flex items-center justify-center text-center shadow-sm">
-              {isTrainerMode ? (
-                <>
-                  <span className="md:hidden">{activeHeaderTitle}</span>
-                  <span className="hidden md:inline">
-                    {trainerDesktopSectionLabel}
-                  </span>
-                </>
-              ) : (
-                activeHeaderTitle
-              )}
+              {/* phone and desktop share the same coach navigation, so the same label */}
+              {isTrainerMode ? trainerDesktopSectionLabel : activeHeaderTitle}
             </div>
           </div>
         </div>
