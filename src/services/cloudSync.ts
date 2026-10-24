@@ -106,6 +106,11 @@ export async function pushNutrition(
   await upsertChanged('nutrition', rows, 'client_id,date');
 }
 
+function toIsoTimestamp(label: string): string {
+  const t = Date.parse(label);
+  return Number.isNaN(t) ? new Date().toISOString() : new Date(t).toISOString();
+}
+
 export async function pushMessages(map: Record<string, DirectMessage[]>) {
   const rows = Object.entries(map).flatMap(([clientId, msgs]) =>
     msgs.map((m) => {
@@ -113,7 +118,8 @@ export async function pushMessages(map: Record<string, DirectMessage[]>) {
       return {
         key: m.id,
         json,
-        row: { id: m.id, client_id: clientId, data: m, created_at: m.timestamp },
+        // m.timestamp is a display label (e.g. "10:42 AM"); the DB needs a real timestamp
+        row: { id: m.id, client_id: clientId, data: m, created_at: toIsoTimestamp(m.timestamp) },
       };
     })
   );

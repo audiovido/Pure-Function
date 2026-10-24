@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { getTodayDateString } from '../utils/dateUtils';
 import {
   MessageSquare,
@@ -39,8 +39,10 @@ import {
   AlertCircle,
   Sparkles,
 } from 'lucide-react';
-import { ClientProfile, DayWorkout, Exercise } from '../types';
+import { ClientProfile, DayWorkout, DirectMessage, Exercise } from '../types';
 import { cardsFromDays, daysFromCards } from '../utils/workoutAdapter';
+import { useIsMobile } from '../utils/useIsMobile';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 import { TRUECOACH_EXERCISE_LIBRARY } from '../data/trueCoachExerciseLibrary';
 
 export type ClientSidebarTab =
@@ -97,6 +99,9 @@ interface TrainerClientWorkspaceProps {
     clientId: string,
     updater: (prev: DayWorkout[]) => DayWorkout[]
   ) => void;
+  /** this client's real message thread */
+  messages?: DirectMessage[];
+  onSendMessage?: (text: string) => void;
 }
 
 function getInitials(name: string): string {
@@ -123,6 +128,69 @@ function formatIso(dt: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+// Sample data shown only in the offline demo (real accounts start empty)
+const DEMO_GOALS = [
+  {
+    id: 'g-1',
+    title: 'Overhead Snatch Stability — 65 kg',
+    category: 'Strength',
+    targetDate: 'Nov 30, 2026',
+    progress: 80,
+    status: 'On Track',
+  },
+  {
+    id: 'g-2',
+    title: '100% Weekly Workout Compliance (4/4 Sessions)',
+    category: 'Habit',
+    targetDate: 'Oct 31, 2026',
+    progress: 75,
+    status: 'Active',
+  },
+  {
+    id: 'g-3',
+    title: 'Strict L-Sit Hold on Parallettes — 30s',
+    category: 'Gymnastics',
+    targetDate: 'Dec 15, 2026',
+    progress: 60,
+    status: 'On Track',
+  },
+];
+
+const DEMO_METRICS = [
+  { id: 'm-1', name: 'Body Weight', value: '63.4', unit: 'kg', date: 'Oct 23, 2026', change: '-0.6 kg' },
+  { id: 'm-2', name: 'Hang Power Snatch 1RM', value: '58.0', unit: 'kg', date: 'Oct 20, 2026', change: '+2.5 kg' },
+  { id: 'm-3', name: 'Resting Heart Rate', value: '52', unit: 'bpm', date: 'Oct 23, 2026', change: '-2 bpm' },
+  { id: 'm-4', name: 'Skeletal Muscle Mass', value: '28.9', unit: 'kg', date: 'Oct 18, 2026', change: '+0.4 kg' },
+];
+
+const DEMO_NOTES = [
+  {
+    id: 'n-1',
+    title: 'Shoulder Mobility & Overhead Position',
+    category: 'Movement Note',
+    content: 'Responds well to quadruped scapular push-ups and thoracic openers prior to snatch grip pressing.',
+    updated: 'Oct 20, 2026',
+  },
+  {
+    id: 'n-2',
+    title: 'Left Ankle Dorsiflexion',
+    category: 'Limitation',
+    content: 'Use 0.5" heel lift or weightlifting shoes on deep Zercher & overhead squats.',
+    updated: 'Oct 14, 2026',
+  },
+];
+
+const DEMO_EQUIPMENT = [
+  'Olympic Barbell (20kg / 15kg)',
+  'Bumper Plates',
+  'Dumbbells (5–40 kg)',
+  'Parallettes',
+  'Pull-Up Rig / Lat Pulldown',
+  'Landmine Attachment',
+  'Plyo Box',
+  'Resistance Bands',
+];
+
 export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
   client,
   allClients,
@@ -132,9 +200,18 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
   initialTab = 'workouts',
   workouts,
   onUpdateWorkouts,
+  messages,
+  onSendMessage,
 }) => {
   // Active tab in the secondary client sidebar
   const [activeTab, setActiveTab] = useState<ClientSidebarTab>(initialTab);
+  const isMobile = useIsMobile();
+  // Phone: open the week scrolled to today, like a list
+  useEffect(() => {
+    if (!isMobile || activeTab !== 'workouts') return;
+    const el = document.querySelector(`[data-day="${getTodayDateString()}"]`);
+    el?.scrollIntoView({ block: 'start' });
+  }, [isMobile, activeTab]);
   // Collapsible secondary sidebar state (collapsed icon rail by default like screenshot, expandable via bottom arrow)
   const [isRailExpanded, setIsRailExpanded] = useState(false);
   // Client switcher dropdown in top avatar
@@ -186,32 +263,9 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
   const [flagInputText, setFlagInputText] = useState('');
 
   // Interactive states for secondary client tabs (Goals, Nutrition, Metrics, Notes, Documents, Equipment, Pictures, Settings, Billing, Messages)
-  const [clientGoals, setClientGoals] = useState([
-    {
-      id: 'g-1',
-      title: 'Overhead Snatch Stability — 65 kg',
-      category: 'Strength',
-      targetDate: 'Nov 30, 2026',
-      progress: 80,
-      status: 'On Track',
-    },
-    {
-      id: 'g-2',
-      title: '100% Weekly Workout Compliance (4/4 Sessions)',
-      category: 'Habit',
-      targetDate: 'Oct 31, 2026',
-      progress: 75,
-      status: 'Active',
-    },
-    {
-      id: 'g-3',
-      title: 'Strict L-Sit Hold on Parallettes — 30s',
-      category: 'Gymnastics',
-      targetDate: 'Dec 15, 2026',
-      progress: 60,
-      status: 'On Track',
-    },
-  ]);
+  const [clientGoals, setClientGoals] = useState(() =>
+    (client.coachGoals as typeof DEMO_GOALS | undefined) ??
+    (isSupabaseConfigured ? [] : DEMO_GOALS));
   const [newGoalTitle, setNewGoalTitle] = useState('');
 
   const [macroTargets, setMacroTargets] = useState({
@@ -221,48 +275,41 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
     calories: 2125,
   });
 
-  const [clientMetrics, setClientMetrics] = useState([
-    { id: 'm-1', name: 'Body Weight', value: '63.4', unit: 'kg', date: 'Oct 23, 2026', change: '-0.6 kg' },
-    { id: 'm-2', name: 'Hang Power Snatch 1RM', value: '58.0', unit: 'kg', date: 'Oct 20, 2026', change: '+2.5 kg' },
-    { id: 'm-3', name: 'Resting Heart Rate', value: '52', unit: 'bpm', date: 'Oct 23, 2026', change: '-2 bpm' },
-    { id: 'm-4', name: 'Skeletal Muscle Mass', value: '28.9', unit: 'kg', date: 'Oct 18, 2026', change: '+0.4 kg' },
-  ]);
+  const [clientMetrics, setClientMetrics] = useState(() =>
+    (client.coachMetrics as typeof DEMO_METRICS | undefined) ??
+    (isSupabaseConfigured ? [] : DEMO_METRICS));
   const [newMetricName, setNewMetricName] = useState('');
   const [newMetricVal, setNewMetricVal] = useState('');
   const [newMetricUnit, setNewMetricUnit] = useState('kg');
 
-  const [coachNotes, setCoachNotes] = useState([
-    {
-      id: 'n-1',
-      title: 'Shoulder Mobility & Overhead Position',
-      category: 'Movement Note',
-      content: 'Responds well to quadruped scapular push-ups and thoracic openers prior to snatch grip pressing.',
-      updated: 'Oct 20, 2026',
-    },
-    {
-      id: 'n-2',
-      title: 'Left Ankle Dorsiflexion',
-      category: 'Limitation',
-      content: 'Use 0.5" heel lift or weightlifting shoes on deep Zercher & overhead squats.',
-      updated: 'Oct 14, 2026',
-    },
-  ]);
+  const [coachNotes, setCoachNotes] = useState(() =>
+    (client.coachNotesList as typeof DEMO_NOTES | undefined) ??
+    (isSupabaseConfigured ? [] : DEMO_NOTES));
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteBody, setNewNoteBody] = useState('');
 
-  const [clientEquipment, setClientEquipment] = useState< string[]>([
-    'Olympic Barbell (20kg / 15kg)',
-    'Bumper Plates',
-    'Dumbbells (5–40 kg)',
-    'Parallettes',
-    'Pull-Up Rig / Lat Pulldown',
-    'Landmine Attachment',
-    'Plyo Box',
-    'Resistance Bands',
-  ]);
+  const [clientEquipment, setClientEquipment] = useState< string[]>(() =>
+    (client.equipment as string[] | undefined) ??
+    (isSupabaseConfigured ? [] : DEMO_EQUIPMENT));
   const [newEquipItem, setNewEquipItem] = useState('');
 
-  const [chatHistory, setChatHistory] = useState([
+  // Save workspace tab edits on the client profile (synced to the cloud with the client)
+  const didMountTabs = useRef(false);
+  useEffect(() => {
+    if (!didMountTabs.current) {
+      didMountTabs.current = true;
+      return;
+    }
+    onUpdateClient?.(client.id, {
+      coachGoals: clientGoals,
+      coachMetrics: clientMetrics,
+      coachNotesList: coachNotes,
+      equipment: clientEquipment,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientGoals, clientMetrics, coachNotes, clientEquipment]);
+
+  const [chatHistory, setChatHistory] = useState(isSupabaseConfigured ? [] : [
     {
       id: 'msg-1',
       sender: 'client' as const,
@@ -624,7 +671,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
          ========================================================= */}
       <aside
         aria-label="Client navigation rail"
-        className={`flex flex-col justify-between shrink-0 bg-[#252a36] text-neutral-300 border-r border-neutral-800/80 select-none transition-all duration-200 relative z-20 ${
+        className={`hidden md:flex flex-col justify-between shrink-0 bg-[#252a36] text-neutral-300 border-r border-neutral-800/80 select-none transition-all duration-200 relative z-20 ${
           isRailExpanded ? 'w-[205px]' : 'w-[58px]'
         }`}
       >
@@ -802,6 +849,53 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
           MAIN CLIENT WORKSPACE AREA
          ========================================================= */}
       <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-[#f4f5f7]">
+        {/* Phone: the client rail becomes a header with back button + scrollable tabs */}
+        <div className="md:hidden shrink-0 bg-[#252a36] text-white">
+          <div className="flex items-center gap-3 px-3 pt-2.5 pb-2">
+            <button
+              type="button"
+              onClick={onBackToClients}
+              aria-label="Back to clients"
+              className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center cursor-pointer"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="w-8 h-8 rounded-full bg-white text-[#181b22] font-black text-[11px] flex items-center justify-center shrink-0 ring-2 ring-amber-400/80">
+              {getInitials(client.name)}
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-extrabold truncate">{client.name}</div>
+              <div className="text-[10px] text-amber-400 font-semibold truncate">
+                {client.clientType || 'Dual'} Client
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar px-3 pb-2.5">
+            {[
+              sidebarMainItems[0],
+              { id: 'messages' as ClientSidebarTab, label: 'Messages', icon: MessageSquare },
+              ...sidebarMainItems.slice(1),
+              ...sidebarBottomItems,
+            ].map((item) => {
+              const Icon = item.icon;
+              const active = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveTab(item.id)}
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-colors ${
+                    active ? 'bg-amber-400 text-black' : 'bg-white/10 text-neutral-200'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* ---------------------------------------------------------
             TAB 1: WORKOUTS WEEKLY CALENDAR (Screenshot Match)
            --------------------------------------------------------- */}
@@ -1072,9 +1166,14 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             {/* Multi-Day Weekly Column Grid (MON 19 .. SAT 24 / SUN 25) */}
             <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto px-3 pb-4 pt-1">
               <div
-                className="min-w-[920px] h-full grid gap-0 border border-neutral-300 rounded-t-lg bg-[#f4f5f7]"
+                className={`${
+                  isMobile ? '' : 'min-w-[920px] h-full'
+                } grid gap-0 border border-neutral-300 rounded-t-lg bg-[#f4f5f7]`}
                 style={{
-                  gridTemplateColumns: showSundayColumn
+                  // phone: days stacked vertically (one column), like a list
+                  gridTemplateColumns: isMobile
+                    ? '1fr'
+                    : showSundayColumn
                     ? 'repeat(6, minmax(150px, 1fr)) minmax(90px, 0.55fr)'
                     : 'repeat(6, minmax(160px, 1fr))',
                 }}
@@ -1090,6 +1189,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                   return (
                     <div
                       key={day.iso}
+                      data-day={day.iso}
                       onDragOver={(e) => {
                         if (draggedMoveItem) {
                           e.preventDefault();
@@ -1119,7 +1219,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                         }
                         setDraggedMoveItem(null);
                       }}
-                      className={`flex flex-col min-h-[540px] border-r border-neutral-300 last:border-r-0 transition-colors ${
+                      className={`flex flex-col ${isMobile ? 'border-b' : 'min-h-[540px] border-r last:border-r-0'} border-neutral-300 transition-colors ${
                         dragOverDateIso === day.iso
                           ? 'bg-amber-50/90 ring-2 ring-amber-400 z-20'
                           : day.isToday
@@ -1189,9 +1289,13 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                         {dayWorkouts.length === 0 ? (
                           <div
                             onClick={() => handleOpenAddWorkoutForDay(day.iso)}
-                            className={`h-full min-h-[180px] rounded-lg border flex flex-col items-center justify-center transition-all cursor-pointer text-xs gap-1 ${
+                            className={`${
+                              isMobile ? 'min-h-[40px] flex-row' : 'h-full min-h-[180px] flex-col'
+                            } rounded-lg border flex items-center justify-center transition-all cursor-pointer text-xs gap-1 ${
                               dragOverDateIso === day.iso
                                 ? 'border-dashed border-amber-500 bg-amber-100/50 opacity-100 text-amber-800 font-bold'
+                                : isMobile
+                                ? 'border-dashed border-neutral-300 text-neutral-400'
                                 : 'border-transparent hover:border-dashed hover:border-neutral-300 opacity-0 hover:opacity-100 text-neutral-400'
                             }`}
                           >
@@ -1412,7 +1516,15 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
               </div>
 
               <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-[#f8f9fa]">
-                {chatHistory.map((m) => (
+                {(messages
+                  ? messages.map((m) => ({
+                      id: m.id,
+                      sender: m.senderRole,
+                      text: m.text,
+                      time: m.timestamp,
+                    }))
+                  : chatHistory
+                ).map((m) => (
                   <div
                     key={m.id}
                     className={`flex flex-col max-w-md ${
@@ -1437,6 +1549,11 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!chatDraft.trim()) return;
+                  if (onSendMessage) {
+                    onSendMessage(chatDraft.trim());
+                    setChatDraft('');
+                    return;
+                  }
                   setChatHistory((prev) => [
                     ...prev,
                     {
@@ -1455,11 +1572,11 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                   value={chatDraft}
                   onChange={(e) => setChatDraft(e.target.value)}
                   placeholder={`Message ${client.name}...`}
-                  className="flex-1 px-4 py-2.5 rounded-full border border-neutral-300 text-xs sm:text-sm outline-none focus:border-amber-400"
+                  className="flex-1 min-w-0 px-4 py-2.5 rounded-full border border-neutral-300 text-xs sm:text-sm outline-none focus:border-amber-400"
                 />
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-full bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                  className="shrink-0 px-4 sm:px-5 py-2.5 rounded-full bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Send</span>
