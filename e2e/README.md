@@ -12,3 +12,10 @@ cd e2e && for t in cloud-flow cloud-auth cloud-realtime cloud-empty-coach; do no
 ```
 
 Every line should print `PASS`. Not run in CI (needs a browser download).
+
+Screenshot walkthroughs (no assertions; they print console errors and horizontal overflow):
+
+```bash
+node walk-coach.cjs /tmp/dist-cloud /tmp/shots    # desktop: coach builds a workout, client sees it
+node walk-mobile.cjs /tmp/dist-cloud /tmp/shots   # phone: every coach tab
+```

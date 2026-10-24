@@ -848,7 +848,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
          ========================================================= */}
       <nav
         aria-label="Client bottom navigation"
-        className="shrink-0 bg-white border-t border-neutral-200 px-2 py-2 grid grid-cols-5 z-30"
+        className="shrink-0 bg-white border-t border-neutral-200 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] grid grid-cols-5 z-30"
       >
         <button
           type="button"

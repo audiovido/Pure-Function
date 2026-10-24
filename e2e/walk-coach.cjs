@@ -9,7 +9,7 @@ const srv=http.createServer((q,r)=>{ let f=path.join(root,q.url.split('?')[0]); 
  db.clients.push({id:'ryan',data:{id:'ryan',name:'Ryan Sterling',email:'ryan@x.com',membershipStatus:'Active',goal:'',coach:'Coach',currentProgram:'',assessments:[],homework:[]}});
  const b=await chromium.launch(); const ctx=await b.newContext({viewport:{width:1440,height:900}});
  await ctx.route('https://mock.supabase.co/**',mock.handler); await ctx.routeWebSocket('wss://mock.supabase.co/**',mock.wsHandler);
- const p=await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(e.message));
+ const p=await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{ if(['warning','error'].includes(m.type()) && !/WebSocket|fonts\.g|ERR_|Failed to load resource/.test(m.text())) errs.push('CONSOLE '+m.type()+': '+m.text().slice(0,200)); });
  let n=0; const shot=async(name)=>{ await p.screenshot({path:`${out}/${String(++n).padStart(2,'0')}-${name}.png`}); console.log('shot',n,name); };
  await p.goto('http://localhost:4194/'); await p.waitForTimeout(2200);
  await p.locator('input[aria-label="Email"]').fill('coach@example.com'); await p.locator('input[aria-label="Password"]').fill('pw-coach-1');

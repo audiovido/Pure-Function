@@ -9,7 +9,7 @@ interface Props {
 
 /** Shown between sign-in and the first successful data load from the cloud. */
 export const CloudStatusScreen: React.FC<Props> = ({ error, onRetry, onSignOut }) => (
-  <div className="min-h-screen flex flex-col items-center justify-center gap-5 bg-[#14171f] px-6 text-center">
+  <div className="min-h-dvh flex flex-col items-center justify-center gap-5 bg-[#14171f] px-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-center">
     <PureFunctionLogo theme="dark" variant="badge" className="w-full max-w-[260px]" />
     {error ? (
       <>

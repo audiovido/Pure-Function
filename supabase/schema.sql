@@ -62,22 +62,30 @@ alter table public.nutrition enable row level security;
 alter table public.messages  enable row level security;
 
 -- Only signed-in users have policies; anonymous requests see nothing.
--- profiles: read own; trainer reads/writes all
-create policy "profiles self read"   on public.profiles to authenticated for select using (id = auth.uid() or private.is_trainer());
-create policy "profiles trainer all" on public.profiles to authenticated for all    using (private.is_trainer()) with check (private.is_trainer());
+-- One policy per table/action; helpers wrapped in (select ...) so they run once per query.
+create policy "profiles read"   on public.profiles for select to authenticated using (id = (select auth.uid()) or (select private.is_trainer()));
+create policy "profiles insert" on public.profiles for insert to authenticated with check ((select private.is_trainer()));
+create policy "profiles update" on public.profiles for update to authenticated using ((select private.is_trainer())) with check ((select private.is_trainer()));
+create policy "profiles delete" on public.profiles for delete to authenticated using ((select private.is_trainer()));
 
--- clients: trainer full; client reads/updates only own row
-create policy "clients trainer all" on public.clients to authenticated for all using (private.is_trainer()) with check (private.is_trainer());
-create policy "clients self read"   on public.clients to authenticated for select using (id = private.my_client_id());
-create policy "clients self update" on public.clients to authenticated for update using (id = private.my_client_id()) with check (id = private.my_client_id());
+-- clients: trainer full; a client reads/updates only their own row
+create policy "clients read"   on public.clients for select to authenticated using ((select private.is_trainer()) or id = (select private.my_client_id()));
+create policy "clients update" on public.clients for update to authenticated
+  using ((select private.is_trainer()) or id = (select private.my_client_id()))
+  with check ((select private.is_trainer()) or id = (select private.my_client_id()));
+create policy "clients insert" on public.clients for insert to authenticated with check ((select private.is_trainer()));
+create policy "clients delete" on public.clients for delete to authenticated using ((select private.is_trainer()));
 
--- workouts / nutrition / messages: trainer full; client only own client_id
-create policy "workouts trainer all"  on public.workouts  to authenticated for all using (private.is_trainer()) with check (private.is_trainer());
-create policy "workouts self all"     on public.workouts  to authenticated for all using (client_id = private.my_client_id()) with check (client_id = private.my_client_id());
-create policy "nutrition trainer all" on public.nutrition to authenticated for all using (private.is_trainer()) with check (private.is_trainer());
-create policy "nutrition self all"    on public.nutrition to authenticated for all using (client_id = private.my_client_id()) with check (client_id = private.my_client_id());
-create policy "messages trainer all"  on public.messages  to authenticated for all using (private.is_trainer()) with check (private.is_trainer());
-create policy "messages self all"     on public.messages  to authenticated for all using (client_id = private.my_client_id()) with check (client_id = private.my_client_id());
+-- workouts / nutrition / messages: trainer full; a client only their own client_id
+create policy "workouts access" on public.workouts for all to authenticated
+  using ((select private.is_trainer()) or client_id = (select private.my_client_id()))
+  with check ((select private.is_trainer()) or client_id = (select private.my_client_id()));
+create policy "nutrition access" on public.nutrition for all to authenticated
+  using ((select private.is_trainer()) or client_id = (select private.my_client_id()))
+  with check ((select private.is_trainer()) or client_id = (select private.my_client_id()));
+create policy "messages access" on public.messages for all to authenticated
+  using ((select private.is_trainer()) or client_id = (select private.my_client_id()))
+  with check ((select private.is_trainer()) or client_id = (select private.my_client_id()));
 
 -- Realtime: chat messages and workout edits show up live on other devices.
 do $$ begin
