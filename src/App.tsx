@@ -38,6 +38,13 @@ import {
   loadMessagesMap,
   saveMessagesMap,
 } from './services/storageService';
+import {
+  pushClients,
+  pushWorkouts,
+  pushNutrition,
+  pushMessages,
+} from './services/cloudSync';
+import { isSupabaseConfigured } from './services/supabaseClient';
 import { PureFunctionLogo } from './components/PureFunctionLogo';
 import { AuthScreen } from './components/AuthScreen';
 import { TrainerView, TrainerBottomTab } from './components/TrainerView';
@@ -126,6 +133,9 @@ export default function App() {
   // Sync persistent stores to localStorage
   useEffect(() => {
     saveClients(clients);
+    if (!isSupabaseConfigured) return;
+    const t = setTimeout(() => { pushClients(clients); }, 1500); // debounced cloud sync
+    return () => clearTimeout(t);
   }, [clients]);
 
   useEffect(() => {
@@ -134,14 +144,23 @@ export default function App() {
 
   useEffect(() => {
     saveWorkoutsMap(clientWorkoutsMap);
+    if (!isSupabaseConfigured) return;
+    const t = setTimeout(() => { pushWorkouts(clientWorkoutsMap); }, 1500); // debounced cloud sync
+    return () => clearTimeout(t);
   }, [clientWorkoutsMap]);
 
   useEffect(() => {
     saveNutritionMap(nutritionMap);
+    if (!isSupabaseConfigured) return;
+    const t = setTimeout(() => { pushNutrition(nutritionMap); }, 1500); // debounced cloud sync
+    return () => clearTimeout(t);
   }, [nutritionMap]);
 
   useEffect(() => {
     saveMessagesMap(messagesMap);
+    if (!isSupabaseConfigured) return;
+    const t = setTimeout(() => { pushMessages(messagesMap); }, 1500); // debounced cloud sync
+    return () => clearTimeout(t);
   }, [messagesMap]);
 
   // Sign In Handler
