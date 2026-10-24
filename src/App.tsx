@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import {
   INITIAL_OCTOBER_WORKOUTS,
   getClientInitialWorkouts,
@@ -53,13 +53,15 @@ import { isSupabaseConfigured } from './services/supabaseClient';
 import { getCompliance } from './utils/progress';
 import { PureFunctionLogo } from './components/PureFunctionLogo';
 import { AuthScreen } from './components/AuthScreen';
-import { TrainerView, TrainerBottomTab } from './components/TrainerView';
+import type { TrainerBottomTab } from './components/TrainerView';
 import { ClientView, ClientBottomTab } from './components/ClientView';
-import { VideoPlayerModal } from './components/VideoPlayerModal';
-import { AddExerciseModal } from './components/AddExerciseModal';
-import { AssessmentsModal } from './components/AssessmentsModal';
-import { LibraryModal } from './components/LibraryModal';
-import { ProgramsModal } from './components/ProgramsModal';
+// Loaded on demand: clients never download the coach app or the exercise library up front
+const TrainerView = lazy(() => import('./components/TrainerView').then((m) => ({ default: m.TrainerView })));
+const VideoPlayerModal = lazy(() => import('./components/VideoPlayerModal').then((m) => ({ default: m.VideoPlayerModal })));
+const AddExerciseModal = lazy(() => import('./components/AddExerciseModal').then((m) => ({ default: m.AddExerciseModal })));
+const AssessmentsModal = lazy(() => import('./components/AssessmentsModal').then((m) => ({ default: m.AssessmentsModal })));
+const LibraryModal = lazy(() => import('./components/LibraryModal').then((m) => ({ default: m.LibraryModal })));
+const ProgramsModal = lazy(() => import('./components/ProgramsModal').then((m) => ({ default: m.ProgramsModal })));
 import { ClientManagerModal } from './components/ClientManagerModal';
 import { CloudStatusScreen } from './components/CloudStatusScreen';
 import { EMPTY_CLIENT } from './data/emptyClient';
@@ -726,7 +728,7 @@ export default function App() {
         Locked at the top of the viewport, with Pure Function logo centered in the frame,
         and a Yellow box on the right with centered Black text showing the current section
       */}
-      <header className="shrink-0 sticky top-0 z-40 overflow-hidden bg-gradient-to-b from-[#2b303c] via-[#1d212b] to-[#14171f] border-b border-neutral-700/70 px-3 sm:px-6 py-1.5 sm:py-2 shadow-[0_6px_18px_-4px_rgba(20,23,31,0.28),inset_0_1px_1px_rgba(255,255,255,0.14)]">
+      <header className="shrink-0 sticky top-0 z-40 overflow-hidden bg-gradient-to-b from-[#2b303c] via-[#1d212b] to-[#14171f] border-b border-neutral-700/70 px-3 sm:px-6 pb-1.5 sm:pb-2 pt-[calc(env(safe-area-inset-top)+0.375rem)] sm:pt-[calc(env(safe-area-inset-top)+0.5rem)] shadow-[0_6px_18px_-4px_rgba(20,23,31,0.28),inset_0_1px_1px_rgba(255,255,255,0.14)]">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.07] to-transparent" />
         <div
           className={`relative z-10 mx-auto grid grid-cols-3 items-center min-h-[34px] sm:min-h-[38px] ${
@@ -772,6 +774,13 @@ export default function App() {
       >
         {/* View Mode 1: Trainer View (TrueCoach Minimal Model) */}
         {isTrainerAccount && viewMode === 'trainer' && (
+          <Suspense
+            fallback={
+              <div role="status" className="flex-1 flex items-center justify-center text-sm text-neutral-500">
+                Loading…
+              </div>
+            }
+          >
           <TrainerView
             clients={clients}
             selectedClientId={selectedClientId}
@@ -817,6 +826,7 @@ export default function App() {
             onDesktopSectionLabelChange={setTrainerDesktopSectionLabel}
             theme={theme}
           />
+          </Suspense>
         )}
 
         {/* View Mode 2: Client View (TrueCoach Athlete Minimal Model) */}
@@ -847,6 +857,7 @@ export default function App() {
         )}
       </main>
 
+      <Suspense fallback={null}>
       {/* Modals with Full Theme Support & Real Video Demonstration */}
       {/* 1. Real Video Player Modal (YouTube Demonstration) */}
       {videoExercise && (
@@ -912,6 +923,8 @@ export default function App() {
           theme={theme}
         />
       )}
+
+      </Suspense>
 
       {/* 6. TrueCoach Client Manager Modal (Search, Add, Delete Clients) */}
       {isClientManagerOpen && (

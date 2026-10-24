@@ -11,7 +11,7 @@ const srv=http.createServer((q,r)=>{ let f=path.join(root,q.url.split('?')[0]); 
  db.workouts.push({client_id:'ryan',date:iso,data:{date:iso,dayOfWeek:'X',dayNumber:1,fullDayName:'X',focus:'Lower body',exercises:[{id:'e1',name:'Back Squat',sets:3,setsText:'3',reps:'8/8',intensity:'135 lb',rest:'',notes:'',orderLabel:'A'},{id:'e2',name:'Romanian Deadlift',sets:3,reps:'10',intensity:'',rest:'',notes:'',orderLabel:'B'}]}});
  const b=await chromium.launch(); const ctx=await b.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
  await ctx.route('https://mock.supabase.co/**',mock.handler); await ctx.routeWebSocket('wss://mock.supabase.co/**',mock.wsHandler);
- const p=await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(e.message));
+ const p=await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{ if(['warning','error'].includes(m.type()) && !/WebSocket|fonts\.g|ERR_|Failed to load resource/.test(m.text())) errs.push('CONSOLE '+m.type()+': '+m.text().slice(0,200)); });
  let n=0; const shot=async(name)=>{ await p.screenshot({path:`${out}/${String(++n).padStart(2,'0')}-${name}.png`}); const hw=await p.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+1); console.log('shot',n,name, hw?'(HORIZONTAL OVERFLOW)':''); };
  await p.goto('http://localhost:4195/'); await p.waitForTimeout(2200);
  await p.locator('input[aria-label="Email"]').fill('coach@example.com'); await p.locator('input[aria-label="Password"]').fill('pw-coach-1');
