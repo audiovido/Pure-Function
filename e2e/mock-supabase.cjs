@@ -1,7 +1,7 @@
 // Minimal in-memory Supabase (auth + PostgREST) for Playwright route mocking.
-// Mirrors the DB trigger rules: first signup = trainer; later signups = client iff a clients row has that email.
+// Mirrors the DB trigger rules: the configured coach email = trainer; others = client iff a clients row has that email.
 const crypto = require('crypto');
-module.exports = function createMock() {
+module.exports = function createMock({ coachEmail = 'coach@example.com' } = {}) {
   const db = { users: [], profiles: [], clients: [], workouts: [], nutrition: [], messages: [] };
   const log = [];
   const keys = { clients: ['id'], workouts: ['client_id','date'], nutrition: ['client_id','date'], messages: ['id'], profiles: ['id'] };
@@ -12,7 +12,7 @@ module.exports = function createMock() {
   const uidFromAuth = (req) => { const a = req.headers()['authorization'] || ''; const m = a.match(/tok-(.+)$/); return m && m[1]; };
 
   function createProfile(u) {
-    if (!db.profiles.some(p => p.role === 'trainer')) {
+    if (u.email.toLowerCase() === coachEmail.toLowerCase() && !db.profiles.some(p => p.role === 'trainer')) {
       db.profiles.push({ id: u.id, role: 'trainer', display_name: (u.meta && u.meta.display_name) || u.email.split('@')[0], client_id: null });
     } else {
       const c = db.clients.find(c => (c.data.email || '').toLowerCase() === u.email.toLowerCase());

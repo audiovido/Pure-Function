@@ -62,7 +62,11 @@ export async function signUp(
   const { data, error } = await supabase.auth.signUp({
     email: email.trim(),
     password,
-    options: { data: { display_name: displayName.trim() } },
+    options: {
+      data: { display_name: displayName.trim() },
+      // confirmation links come back to this app (must be allowed in Supabase URL settings)
+      emailRedirectTo: window.location.origin + window.location.pathname,
+    },
   });
   if (error) return { error: error.message };
 

@@ -38,13 +38,9 @@ jobs:
           npm run lint
           npm test
 
+      # Supabase URL + publishable key come from .env.production (public values)
       - name: Build
         run: npm run build
-        env:
-          # Set under GitHub > Settings > Secrets and variables > Actions > Variables.
-          # The anon key is public by design; Row Level Security protects the data.
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

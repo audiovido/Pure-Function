@@ -23,17 +23,23 @@ the coach programs workouts, clients see them on their phone, log their results,
 1. **Create a Supabase project** at [supabase.com](https://supabase.com).
 2. **Create the database:** in *SQL Editor*, run [`supabase/schema.sql`](supabase/schema.sql), then
    [`supabase/auth.sql`](supabase/auth.sql).
-3. **Auth settings** (*Authentication → Sign In / Providers → Email*): keep **Confirm email ON**.
-   In *Authentication → URL Configuration*, set **Site URL** to the app's address
-   (e.g. `https://audiovido.github.io/Pure-Function/`) so confirmation links open the app.
-4. **Connect the app:** copy *Project URL* and the *anon / publishable key* from *Project Settings → API*.
-   - Hosted on GitHub Pages: add them as repository **variables** (*Settings → Secrets and variables →
-     Actions → Variables*) named `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, then push to `main`.
-   - Locally: put the same two lines in `.env.local`.
-
-   The anon key is meant to be public; access is protected by Row Level Security in the database.
-5. **The coach signs up first.** The very first account becomes the coach (trainer).
-6. **Add clients with their real email address** (*Add client*). When a client signs up with that same
+3. **Choose the coach:** only this email address can ever become the coach (trainer):
+   ```sql
+   insert into private.settings (key, value) values ('coach_email', 'coach@example.com')
+     on conflict (key) do update set value = excluded.value;
+   ```
+4. **Auth settings:**
+   - *Authentication → URL Configuration*: set **Site URL** to the app's address
+     (e.g. `https://audiovido.github.io/Pure-Function/`).
+   - *Authentication → Sign In / Providers → Email*: Supabase's built-in email service only delivers
+     to members of your Supabase team (and only a few per hour). Either turn **Confirm email off**, or
+     set up custom SMTP (*Authentication → Emails → SMTP Settings*, e.g. Resend or a Gmail app password)
+     and keep it on. With confirmation off, add each client's email right before they sign up.
+5. **Connect the app:** put the *Project URL* and *publishable key* (*Project Settings → API Keys*) in
+   [`.env.production`](.env.production) (used by the deployed build) and/or `.env.local` (local dev).
+   These values are public by design; access is protected by Row Level Security in the database.
+6. **The coach signs up** in the app with the coach email.
+7. **Add clients with their real email address** (*Add client*). When a client signs up with that same
    email, their account is linked automatically and they only ever see their own data.
    Anyone else who signs up gets no access.
 
