@@ -34,7 +34,11 @@ import {
   MacroTargets,
   ThemeMode,
 } from '../types';
-import { getOrCreateDayWorkout } from '../utils/dateUtils';
+import {
+  getOrCreateDayWorkout,
+  getTodayDateString,
+  addDaysToKey,
+} from '../utils/dateUtils';
 import {
   DateRangeCalendarModal,
   SingleDateCalendarModal,
@@ -62,6 +66,10 @@ interface TrainerViewProps {
   onDeleteClient?: (clientId: string) => void;
   workouts: DayWorkout[];
   allClientWorkouts?: Record<string, DayWorkout[]>;
+  onUpdateClientWorkouts?: (
+    clientId: string,
+    updater: (prev: DayWorkout[]) => DayWorkout[]
+  ) => void;
   selectedDate: string;
   onSelectDate: (date: string) => void;
   onOpenVideo: (exercise: Exercise) => void;
@@ -174,6 +182,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
   onUpdateClient,
   workouts,
   allClientWorkouts = {},
+  onUpdateClientWorkouts,
   selectedDate,
   onSelectDate,
   onOpenVideo,
@@ -268,17 +277,18 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
     setEditFirstName(defaultFirst);
     setEditLastName(defaultLast);
     setEditEmail(client.email || '');
-    setEditLocation(client.location ?? 'Los Angeles');
+    setEditLocation(client.location ?? '');
     setEditTimezone(client.timezone ?? 'America / Los_Angeles');
-    setEditHeightFt(client.heightFt ?? '5');
-    setEditHeightIn(client.heightIn ?? '4');
+    setEditHeightFt(client.heightFt ?? '');
+    setEditHeightIn(client.heightIn ?? '');
     setEditWeight(client.weightLbs ?? '');
-    setEditCountryCode(client.countryCode ?? '🇨🇦 +1');
-    setEditPhone(client.phone ?? '(702) 808-2102');
-    setEditBirthday(client.birthday ?? '12/15/1985');
+    setEditCountryCode(client.countryCode ?? '🇺🇸 +1');
+    setEditPhone(client.phone ?? '');
+    setEditBirthday(client.birthday ?? '');
     setEditUnitPreference(client.unitPreference ?? 'Imperial / US');
-    setEditGender(client.gender ?? 'F');
-    setEditEmailDaily(client.emailDailyWorkout ?? false);
+    setEditGender(client.gender ?? 'Prefer not to say');
+    // reminders are on unless turned off (matches the reminder email function)
+    setEditEmailDaily(client.emailDailyWorkout ?? true);
     setEditEmailMissed(client.emailMissedWorkouts ?? false);
     setShowAdditionalDetails(true);
     setSubScreen('editClient');
@@ -463,8 +473,12 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
   }, [clients, allClientWorkouts]);
 
   // Interactive Calendar Modals state
-  const [dateRangeStart, setDateRangeStart] = useState<string>('2026-10-15');
-  const [dateRangeEnd, setDateRangeEnd] = useState<string>('2026-10-22');
+  const [dateRangeStart, setDateRangeStart] = useState<string>(() =>
+    addDaysToKey(getTodayDateString(), -7)
+  );
+  const [dateRangeEnd, setDateRangeEnd] = useState<string>(() =>
+    addDaysToKey(getTodayDateString(), 7)
+  );
   const [isDateRangeModalOpen, setIsDateRangeModalOpen] =
     useState<boolean>(false);
   const [isBirthdayModalOpen, setIsBirthdayModalOpen] =
@@ -496,14 +510,14 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
     ) {
       return 'Completed';
     }
-    if (day.date >= '2026-10-21') {
+    if (day.date >= getTodayDateString()) {
       return 'Pending';
     }
     return 'Missed';
   };
 
   const formatFullDateLabel = (dateStr: string): string => {
-    if (dateStr === '2026-10-21') return 'Today';
+    if (dateStr === getTodayDateString()) return 'Today';
     return formatShortDateLabel(dateStr);
   };
 
@@ -551,6 +565,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
         onOpenVideo={onOpenVideo}
         onAddExerciseClick={onAddExerciseClick}
         allClientWorkouts={allClientWorkouts}
+        onUpdateClientWorkouts={onUpdateClientWorkouts}
         activeAccount={activeAccount}
         onSignOut={onSignOut}
         activeNav={desktopNav}
@@ -1400,7 +1415,9 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
                       </button>
                       <div className="text-xs text-neutral-500 mt-0.5 truncate">
                         {ex.sets} sets × {ex.reps}
-                        {ex.actualWeight ? ` · ${ex.actualWeight}` : ''}
+                        {ex.actualWeight || ex.actualReps
+                          ? ` · Logged ${ex.actualWeight || '—'} × ${ex.actualReps || '—'}`
+                          : ''}
                       </div>
                     </div>
                   </div>

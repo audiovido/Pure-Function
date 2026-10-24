@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { getTodayDateString } from '../utils/dateUtils';
 import {
   ChevronLeft,
   ChevronRight,
@@ -40,7 +41,7 @@ const SHORT_MONTH_NAMES = [
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 export function formatShortDateLabel(dateStr: string): string {
-  if (dateStr === '2026-10-21') return 'Today';
+  if (dateStr === getTodayDateString()) return 'Today';
   const parts = dateStr.split('-');
   if (parts.length !== 3) return dateStr;
   const year = parseInt(parts[0], 10) || 2026;
@@ -250,7 +251,7 @@ export const DateRangeCalendarModal: React.FC<DateRangeCalendarModalProps> = ({
               const isStart = iso === draftStart;
               const isEnd = iso === draftEnd;
               const isInRange = iso > draftStart && iso < draftEnd;
-              const isToday = iso === '2026-10-21';
+              const isToday = iso === getTodayDateString();
               const hasWorkout = workoutDatesSet.has(iso);
 
               return (

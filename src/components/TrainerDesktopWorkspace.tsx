@@ -42,6 +42,21 @@ import {
   ClientSidebarTab,
 } from './TrainerClientWorkspace';
 import { TrainerExerciseEditorView } from './TrainerExerciseEditorView';
+import {
+  getTodayDateString,
+  addDaysToKey,
+  parseDateKey,
+} from '../utils/dateUtils';
+import { isDayCompleted } from '../utils/progress';
+import { isSupabaseConfigured } from '../services/supabaseClient';
+
+function formatDueLabel(dateKey: string): string {
+  return parseDateKey(dateKey).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
 
 export type DesktopPrimaryNav =
   | 'clients'
@@ -83,6 +98,10 @@ interface TrainerDesktopWorkspaceProps {
   onOpenVideo: (exercise: Exercise) => void;
   onAddExerciseClick?: () => void;
   allClientWorkouts?: Record<string, DayWorkout[]>;
+  onUpdateClientWorkouts?: (
+    clientId: string,
+    updater: (prev: DayWorkout[]) => DayWorkout[]
+  ) => void;
   activeAccount?: AuthAccount | null;
   onSignOut?: () => void;
   activeNav: DesktopPrimaryNav;
@@ -101,108 +120,6 @@ interface RosterRowMeta {
   c90: number | null;
   group?: string;
 }
-
-const SCREENSHOT_ROSTER_SEED: {
-  id: string;
-  name: string;
-  email: string;
-  dueLabel: string;
-  dueType: 'orange' | 'red' | 'slate' | 'yellow';
-  c7: number | null;
-  c30: number | null;
-  c90: number | null;
-}[] = [
-  {
-    id: 'alexa-kolb',
-    name: 'Alexa Kolb',
-    email: 'alexa.kolb@purefunction.fit',
-    dueLabel: 'Today',
-    dueType: 'orange',
-    c7: 100,
-    c30: 55,
-    c90: 33,
-  },
-  {
-    id: 'ann-ellias',
-    name: 'Ann Ellias',
-    email: 'ann.ellias@purefunction.fit',
-    dueLabel: 'Last Saturday',
-    dueType: 'red',
-    c7: 13,
-    c30: 4,
-    c90: 28,
-  },
-  {
-    id: 'annie-gabbert',
-    name: 'Annie Gabbert',
-    email: 'annie.gabbert@purefunction.fit',
-    dueLabel: 'Thu, Oct 15th',
-    dueType: 'red',
-    c7: 100,
-    c30: 36,
-    c90: 17,
-  },
-  {
-    id: 'anouk-keijzer',
-    name: 'anouk keijzer',
-    email: 'anouk.keijzer@purefunction.fit',
-    dueLabel: 'Fri, Aug 28th',
-    dueType: 'red',
-    c7: 100,
-    c30: 100,
-    c90: 38,
-  },
-  {
-    id: 'armin-shokri',
-    name: 'armin shokri',
-    email: 'arminsh00@gmail.com',
-    dueLabel: 'None set',
-    dueType: 'slate',
-    c7: 100,
-    c30: 100,
-    c90: 100,
-  },
-  {
-    id: 'armonde-baghdanian',
-    name: 'Armonde Baghdanian',
-    email: 'armonde@purefunction.fit',
-    dueLabel: 'Tue, Aug 11th',
-    dueType: 'red',
-    c7: 100,
-    c30: 100,
-    c90: 0,
-  },
-  {
-    id: 'arsin-ahmadpanahi',
-    name: 'Arsin Ahmadpanahi',
-    email: 'arsin@purefunction.fit',
-    dueLabel: 'Invitation pending',
-    dueType: 'yellow',
-    c7: null,
-    c30: null,
-    c90: null,
-  },
-  {
-    id: 'bobu-motamedi',
-    name: 'bobu motamedi',
-    email: 'bobu@purefunction.fit',
-    dueLabel: 'Invitation pending',
-    dueType: 'yellow',
-    c7: null,
-    c30: null,
-    c90: null,
-  },
-  {
-    id: 'brian-mcgrath',
-    name: 'Brian McGrath',
-    email: 'brian.mcgrath@purefunction.fit',
-    dueLabel: 'Invitation pending',
-    dueType: 'yellow',
-    c7: null,
-    c30: null,
-    c90: null,
-  },
-];
 
 function getInitials(name: string): string {
   return name
@@ -314,6 +231,8 @@ export const TrainerDesktopWorkspace: React.FC<
     hasActiveSubScreen,
     onClearSubScreen,
     unreadActivityCount = 1,
+    allClientWorkouts,
+    onUpdateClientWorkouts,
     children,
   } = rest;
 
@@ -671,68 +590,43 @@ export const TrainerDesktopWorkspace: React.FC<
       { client: ClientProfile; meta: RosterRowMeta }
     >();
 
-    // First include screenshot seed clients so the table matches Screenshot 1 & 7
-    SCREENSHOT_ROSTER_SEED.forEach((seed) => {
-      const existing = clients.find(
-        (c) =>
-          c.id === seed.id || c.name.toLowerCase() === seed.name.toLowerCase()
-      );
-      const clientObj: ClientProfile = existing || {
-        id: seed.id,
-        name: seed.name,
-        email: seed.email,
-        membershipStatus: 'Active',
-        goal: 'Strength & Mobility Progression',
-        coach: 'Hamoon Hosseinpour',
-        currentProgram: 'Core & Stability- DD',
-        clientType: 'Dual',
-        compliance7d: seed.c7 ?? 100,
-        compliance30d: seed.c30 ?? 55,
-        compliance90d: seed.c90 ?? 33,
-        assessments: [],
-        homework: [],
-      };
-      map.set(clientObj.id, {
-        client: clientObj,
+    // Only real clients, with "due" computed from their actual workouts
+    const today = getTodayDateString();
+    clients.forEach((c) => {
+      const days = allClientWorkouts?.[c.id] ?? [];
+      const scheduled = days.filter((d) => d.exercises.length > 0);
+      const nextDue = scheduled
+        .filter((d) => d.date >= today && !isDayCompleted(d))
+        .sort((a, b) => a.date.localeCompare(b.date))[0];
+      const overdue = scheduled
+        .filter((d) => d.date < today && d.date >= addDaysToKey(today, -7) && !isDayCompleted(d))
+        .sort((a, b) => b.date.localeCompare(a.date))[0];
+
+      let dueLabel = 'None set';
+      let dueType: 'orange' | 'red' | 'slate' | 'yellow' = 'slate';
+      if (overdue) {
+        dueLabel = formatDueLabel(overdue.date);
+        dueType = 'red';
+      } else if (nextDue) {
+        dueLabel = nextDue.date === today ? 'Today' : formatDueLabel(nextDue.date);
+        dueType = nextDue.date === today ? 'orange' : 'yellow';
+      }
+
+      map.set(c.id, {
+        client: c,
         meta: {
-          dueLabel: seed.dueLabel,
-          dueType: seed.dueType,
-          c7: seed.c7,
-          c30: seed.c30,
-          c90: seed.c90,
-          group: clientGroupsMap[clientObj.id],
+          dueLabel,
+          dueType,
+          c7: c.compliance7d ?? null,
+          c30: c.compliance30d ?? null,
+          c90: c.compliance90d ?? null,
+          group: clientGroupsMap[c.id],
         },
       });
     });
 
-    // Also include all other clients from the app state
-    clients.forEach((c, idx) => {
-      if (!map.has(c.id)) {
-        const dueOptions: {
-          label: string;
-          type: 'orange' | 'red' | 'slate' | 'yellow';
-        }[] = [
-          { label: 'Today', type: 'orange' },
-          { label: 'Thu, Oct 15th', type: 'red' },
-          { label: 'None set', type: 'slate' },
-        ];
-        const chosenDue = dueOptions[idx % dueOptions.length];
-        map.set(c.id, {
-          client: c,
-          meta: {
-            dueLabel: chosenDue.label,
-            dueType: chosenDue.type,
-            c7: c.compliance7d ?? 100,
-            c30: c.compliance30d ?? 64,
-            c90: c.compliance90d ?? 42,
-            group: clientGroupsMap[c.id],
-          },
-        });
-      }
-    });
-
     return Array.from(map.values());
-  }, [clients, clientGroupsMap]);
+  }, [clients, clientGroupsMap, allClientWorkouts]);
 
   const filteredRoster = useMemo(() => {
     return combinedRoster.filter(({ client, meta }) => {
@@ -1159,10 +1053,16 @@ export const TrainerDesktopWorkspace: React.FC<
               { id: 'clients', label: 'Clients', icon: Users },
               { id: 'library', label: 'Library', icon: BookOpen },
               { id: 'programs', label: 'Programs', icon: Calendar },
-              { id: 'payments', label: 'Payments', icon: CreditCard },
-              { id: 'referrals', label: 'Referrals', icon: Share2 },
-              { id: 'teams', label: 'Teams', icon: Building2 },
-              { id: 'marketing', label: 'Marketing', icon: Filter },
+              // Demo-only sections (no real payments/teams/marketing behind them):
+              // shown in the offline demo, hidden for real (cloud) accounts.
+              ...(isSupabaseConfigured
+                ? []
+                : ([
+                    { id: 'payments', label: 'Payments', icon: CreditCard },
+                    { id: 'referrals', label: 'Referrals', icon: Share2 },
+                    { id: 'teams', label: 'Teams', icon: Building2 },
+                    { id: 'marketing', label: 'Marketing', icon: Filter },
+                  ] as const)),
             ] as const
           ).map((item) => {
             const Icon = item.icon;
@@ -1438,6 +1338,8 @@ export const TrainerDesktopWorkspace: React.FC<
                 onUpdateClient={onUpdateClient}
                 onOpenVideo={onOpenVideo}
                 initialTab={desktopClientInitialTab}
+                workouts={allClientWorkouts?.[desktopActiveClient.id]}
+                onUpdateWorkouts={onUpdateClientWorkouts}
               />
             </div>
           )}
@@ -1501,7 +1403,7 @@ export const TrainerDesktopWorkspace: React.FC<
                     >
                       <span>Active</span>
                       <span className="px-2 py-0.5 rounded-full bg-[#252a36] text-amber-400 text-[11px] font-black tabular-nums">
-                        46
+                        {combinedRoster.filter((r) => !r.client.archived).length}
                       </span>
                     </button>
 

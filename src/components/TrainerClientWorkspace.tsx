@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { getTodayDateString } from '../utils/dateUtils';
 import {
   MessageSquare,
   Apple,
@@ -38,7 +39,8 @@ import {
   AlertCircle,
   Sparkles,
 } from 'lucide-react';
-import { ClientProfile, Exercise } from '../types';
+import { ClientProfile, DayWorkout, Exercise } from '../types';
+import { cardsFromDays, daysFromCards } from '../utils/workoutAdapter';
 import { TRUECOACH_EXERCISE_LIBRARY } from '../data/trueCoachExerciseLibrary';
 
 export type ClientSidebarTab =
@@ -88,224 +90,14 @@ interface TrainerClientWorkspaceProps {
   onUpdateClient?: (clientId: string, updates: Partial<ClientProfile>) => void;
   onOpenVideo?: (exercise: Exercise) => void;
   initialTab?: ClientSidebarTab;
+  /** this client's real workouts (source of truth) */
+  workouts?: DayWorkout[];
+  /** apply a change to this client's real workouts */
+  onUpdateWorkouts?: (
+    clientId: string,
+    updater: (prev: DayWorkout[]) => DayWorkout[]
+  ) => void;
 }
-
-const INITIAL_OCT_2026_WORKOUTS: TrueCoachDayWorkoutCard[] = [
-  {
-    id: 'tc-wk-tue-20',
-    dateIso: '2026-10-20',
-    title: 'Workout',
-    status: 'completed',
-    exercises: [
-      {
-        id: 'tue-ex-1',
-        orderLabel: 'A1',
-        name: 'Barbell Side Bend',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'completed',
-      },
-      {
-        id: 'tue-ex-2',
-        orderLabel: 'A2',
-        name: 'Quadruped Scapular Push-Up',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'completed',
-      },
-      {
-        id: 'tue-ex-3',
-        orderLabel: 'B',
-        name: 'Behind the Neck Snatch Grip Push Press',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'completed',
-      },
-      {
-        id: 'tue-ex-4',
-        orderLabel: 'C',
-        name: 'Hang Power Snatch',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'completed',
-      },
-      {
-        id: 'tue-ex-5',
-        orderLabel: 'D',
-        name: 'Hang Power Clean',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'completed',
-      },
-      {
-        id: 'tue-ex-6',
-        orderLabel: 'E',
-        name: 'Shiko & Sonkyo',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'completed',
-      },
-    ],
-  },
-  {
-    id: 'tc-wk-thu-22',
-    dateIso: '2026-10-22',
-    title: 'Workout',
-    status: 'missed',
-    exercises: [
-      {
-        id: 'thu-ex-1',
-        orderLabel: 'A1',
-        name: 'Kneeling Dumbbell Zottman Curl',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'missed',
-      },
-      {
-        id: 'thu-ex-2',
-        orderLabel: 'A2',
-        name: 'Plank to planche rocks',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'missed',
-      },
-      {
-        id: 'thu-ex-3',
-        orderLabel: 'B',
-        name: 'L-Sit to Tuck Planche on Parallettes',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'missed',
-      },
-      {
-        id: 'thu-ex-4',
-        orderLabel: 'C',
-        name: 'Power Clean to split jerk',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'missed',
-      },
-      {
-        id: 'thu-ex-5',
-        orderLabel: 'D1',
-        name: 'Push Press',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'missed',
-      },
-      {
-        id: 'thu-ex-6',
-        orderLabel: 'D2',
-        name: 'Kipping lat pull-down',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'missed',
-      },
-      {
-        id: 'thu-ex-7',
-        orderLabel: 'D3',
-        name: 'Dragon flag',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'missed',
-      },
-    ],
-  },
-  {
-    id: 'tc-wk-fri-23',
-    dateIso: '2026-10-23',
-    title: 'Workout',
-    status: 'scheduled',
-    exercises: [
-      {
-        id: 'fri-ex-1',
-        orderLabel: 'A1',
-        name: 'Single Leg Broad Jump',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'scheduled',
-      },
-      {
-        id: 'fri-ex-2',
-        orderLabel: 'A2',
-        name: 'Single Leg plank',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'scheduled',
-      },
-      {
-        id: 'fri-ex-3',
-        orderLabel: 'B1',
-        name: 'Snatch',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'scheduled',
-      },
-      {
-        id: 'fri-ex-4',
-        orderLabel: 'B2',
-        name: 'Romanian Deadlift',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'scheduled',
-      },
-      {
-        id: 'fri-ex-5',
-        orderLabel: 'C1',
-        name: 'Zercher Bulgarian Split squat',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'scheduled',
-      },
-      {
-        id: 'fri-ex-6',
-        orderLabel: 'C2',
-        name: 'Landmine Sissy Squat',
-        note: 'offset',
-        sets: '2-3',
-        reps: '5-10',
-        weight: '____',
-        status: 'scheduled',
-      },
-    ],
-  },
-];
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -338,6 +130,8 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
   onBackToClients,
   onUpdateClient,
   initialTab = 'workouts',
+  workouts,
+  onUpdateWorkouts,
 }) => {
   // Active tab in the secondary client sidebar
   const [activeTab, setActiveTab] = useState<ClientSidebarTab>(initialTab);
@@ -347,8 +141,8 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
   const [isClientSwitcherOpen, setIsClientSwitcherOpen] = useState(false);
 
   // Calendar reference date (defaults to Oct 23, 2026 as shown in screenshot)
-  const TODAY_ISO = '2026-10-23';
-  const [currentWeekDateIso, setCurrentWeekDateIso] = useState<string>('2026-10-23');
+  const TODAY_ISO = getTodayDateString();
+  const [currentWeekDateIso, setCurrentWeekDateIso] = useState<string>(getTodayDateString());
   const [calendarViewMode, setCalendarViewMode] = useState<'1week' | '2week' | 'skeleton'>('1week');
   const [isTodayDropdownOpen, setIsTodayDropdownOpen] = useState(false);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
@@ -358,27 +152,14 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'missed' | 'scheduled'>('all');
   const [showSundayColumn, setShowSundayColumn] = useState(true);
 
-  // Per-client workouts state (seeded with the exact screenshot workouts)
-  const [workoutsByClient, setWorkoutsByClient] = useState<
-    Record<string, TrueCoachDayWorkoutCard[]>
-  >(() => ({
-    [client.id]: INITIAL_OCT_2026_WORKOUTS,
-  }));
-
-  const clientWorkouts = useMemo(() => {
-    return workoutsByClient[client.id] || INITIAL_OCT_2026_WORKOUTS;
-  }, [workoutsByClient, client.id]);
+  // Workouts come from the app's real data; edits are converted back and saved there
+  const clientWorkouts = useMemo(() => cardsFromDays(workouts ?? []), [workouts]);
 
   const updateClientWorkouts = (
     updater: (prev: TrueCoachDayWorkoutCard[]) => TrueCoachDayWorkoutCard[]
   ) => {
-    setWorkoutsByClient((prev) => {
-      const current = prev[client.id] || INITIAL_OCT_2026_WORKOUTS;
-      return {
-        ...prev,
-        [client.id]: updater(current),
-      };
-    });
+    const nextCards = updater(clientWorkouts);
+    onUpdateWorkouts?.(client.id, (prevDays) => daysFromCards(nextCards, prevDays));
   };
 
   // Clipboard for copying & pasting workouts between days
@@ -386,7 +167,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
   // Moving workout / exercise(s) modal state
   const [movingWorkout, setMovingWorkout] = useState<TrueCoachDayWorkoutCard | null>(null);
   const [movingExerciseIds, setMovingExerciseIds] = useState<string[]>([]);
-  const [moveModalWeekIso, setMoveModalWeekIso] = useState<string>('2026-10-23');
+  const [moveModalWeekIso, setMoveModalWeekIso] = useState<string>(getTodayDateString());
   // Drag-and-drop state for moving a workout or single exercise to another day column
   const [draggedMoveItem, setDraggedMoveItem] = useState<{
     workoutId: string;
@@ -400,9 +181,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
   const [activeExercisePickerIndex, setActiveExercisePickerIndex] = useState<number | null>(null);
 
   // Day Bookmark/Note state
-  const [dayFlags, setDayFlags] = useState<Record<string, string>>({
-    '2026-10-23': 'Assessment Check-in',
-  });
+  const [dayFlags, setDayFlags] = useState<Record<string, string>>({});
   const [flagModalDateIso, setFlagModalDateIso] = useState<string | null>(null);
   const [flagInputText, setFlagInputText] = useState('');
 

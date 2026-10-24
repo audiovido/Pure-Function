@@ -6,6 +6,7 @@ import {
   DEFAULT_MACRO_TARGETS,
   DEFAULT_PROGRAM_BLOCKS,
 } from '../services/storageService';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 
 interface ClientManagerModalProps {
   clients: ClientProfile[];
@@ -15,6 +16,8 @@ interface ClientManagerModalProps {
   onDeleteClient?: (clientId: string) => void;
   onClose: () => void;
   theme?: ThemeMode;
+  /** shown as the client's coach */
+  coachName?: string;
 }
 
 export const ClientManagerModal: React.FC<ClientManagerModalProps> = ({
@@ -25,6 +28,7 @@ export const ClientManagerModal: React.FC<ClientManagerModalProps> = ({
   onDeleteClient,
   onClose,
   theme = 'dark',
+  coachName = 'Marcus Vance, CSCS',
 }) => {
   const isDark = theme === 'dark';
   const [search, setSearch] = useState('');
@@ -33,6 +37,7 @@ export const ClientManagerModal: React.FC<ClientManagerModalProps> = ({
   // New Client Form State
   const [name, setName] = useState('');
   const [age, setAge] = useState('28');
+  const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('client123');
   const [status, setStatus] = useState<'Active' | 'Deload' | 'Rehab'>('Active');
@@ -74,21 +79,26 @@ export const ClientManagerModal: React.FC<ClientManagerModalProps> = ({
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '');
 
-    const clientId = `${cleanSlug}-${Date.now().toString().slice(-4)}`;
+    const cloud = isSupabaseConfigured;
+    const cleanEmail = email.trim().toLowerCase();
+    if (cloud && !/^\S+@\S+\.\S+$/.test(cleanEmail)) return;
+
+    const clientId = `${cleanSlug || 'client'}-${Date.now().toString().slice(-6)}`;
     const newClient: ClientProfile = {
       id: clientId,
       name: name.trim(),
       age: parseInt(age, 10) || 28,
-      email: `${cleanSlug}@purefunction.fit`,
-      username: cleanSlug,
-      password: password.trim() || 'client123',
+      email: cloud ? cleanEmail : `${cleanSlug}@purefunction.fit`,
+      ...(cloud
+        ? {}
+        : { username: cleanSlug, password: password.trim() || 'client123' }),
       membershipStatus: status,
       goal:
         goal.trim() ||
         'Hip mobility, core stability, and progressive strength development',
-      coach: 'Marcus Vance, CSCS',
-      currentProgram: program.trim() || 'Block I: Movement Foundation',
-      assessments: [
+      coach: coachName,
+      currentProgram: program.trim() || (cloud ? '' : 'Block I: Movement Foundation'),
+      assessments: cloud ? [] : [
         {
           id: `ass-${Date.now()}-1`,
           name: 'Hip Internal Rotation',
@@ -100,7 +110,7 @@ export const ClientManagerModal: React.FC<ClientManagerModalProps> = ({
           improved: true,
         },
       ],
-      homework: [
+      homework: cloud ? [] : [
         {
           id: `hw-${Date.now()}-1`,
           title: '90/90 Diaphragmatic Breathing',
@@ -231,6 +241,26 @@ export const ClientManagerModal: React.FC<ClientManagerModalProps> = ({
               </div>
             </div>
 
+            {isSupabaseConfigured ? (
+              <div>
+                <label className="block text-[11px] font-bold mb-1 text-neutral-400">
+                  Client Email (they sign up with this email)
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="client@example.com"
+                  aria-label="Client email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-xl border text-xs outline-none ${
+                    isDark
+                      ? 'bg-[#161a24] border-neutral-700 text-white'
+                      : 'bg-slate-50 border-neutral-300 text-neutral-900'
+                  }`}
+                />
+              </div>
+            ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
                 <label className="block text-[11px] font-bold mb-1 text-neutral-400">
@@ -266,6 +296,7 @@ export const ClientManagerModal: React.FC<ClientManagerModalProps> = ({
                 />
               </div>
             </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
