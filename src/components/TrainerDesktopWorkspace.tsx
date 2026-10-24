@@ -15,7 +15,6 @@ import {
   Download,
   MoreHorizontal,
   Check,
-  Gift,
   Send,
   Info,
   ChevronRight,
@@ -1679,12 +1678,12 @@ export const TrainerDesktopWorkspace: React.FC<
                           </h2>
                           <div className="space-y-2.5">
                             {[
-                              { name: 'Central Athlete', specialOffer: false },
-                              { name: 'USAW', specialOffer: true },
-                              { name: 'KO8', specialOffer: true },
-                              { name: 'Restoic', specialOffer: true },
-                              { name: 'ISSA', specialOffer: true },
-                              { name: 'Stretch Affect', specialOffer: false },
+                              { name: 'Central Athlete' },
+                              { name: 'USAW' },
+                              { name: 'KO8' },
+                              { name: 'Restoic' },
+                              { name: 'ISSA' },
+                              { name: 'Stretch Affect' },
                             ].map((partner) => {
                               const enabled =
                                 partnerToggles[partner.name] ?? true;
@@ -1718,12 +1717,6 @@ export const TrainerDesktopWorkspace: React.FC<
                                   <span className="text-xs sm:text-sm font-semibold text-neutral-800">
                                     {partner.name}
                                   </span>
-                                  {partner.specialOffer && (
-                                    <span className="px-2.5 py-0.5 rounded-lg bg-[#252a36] text-amber-400 text-[11px] font-bold flex items-center gap-1">
-                                      <Gift className="w-3 h-3" />
-                                      <span>Special Offer</span>
-                                    </span>
-                                  )}
                                 </div>
                               );
                             })}
