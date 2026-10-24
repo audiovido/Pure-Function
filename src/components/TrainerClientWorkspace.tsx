@@ -337,25 +337,16 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
       dateIso,
       title: 'Workout',
       status: 'scheduled',
+      // like TrueCoach: a new workout starts with one empty exercise row
       exercises: [
         {
           id: `ex-${Date.now()}-1`,
-          orderLabel: 'A1',
-          name: 'Barbell Side Bend',
-          note: 'offset',
-          sets: '2-3',
-          reps: '5-10',
-          weight: '____',
-          status: 'scheduled',
-        },
-        {
-          id: `ex-${Date.now()}-2`,
-          orderLabel: 'A2',
-          name: 'Single Leg plank',
-          note: 'offset',
-          sets: '2-3',
-          reps: '5-10',
-          weight: '____',
+          orderLabel: 'A',
+          name: '',
+          note: '',
+          sets: '',
+          reps: '',
+          weight: '',
           status: 'scheduled',
         },
       ],
@@ -365,12 +356,17 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
   const handleSaveEditingWorkout = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingWorkout) return;
+    // rows the coach left without an exercise name are dropped
+    const cleaned = {
+      ...editingWorkout,
+      exercises: editingWorkout.exercises.filter((x) => x.name.trim() !== ''),
+    };
     updateClientWorkouts((prev) => {
-      const exists = prev.some((w) => w.id === editingWorkout.id);
+      const exists = prev.some((w) => w.id === cleaned.id);
       if (exists) {
-        return prev.map((w) => (w.id === editingWorkout.id ? editingWorkout : w));
+        return prev.map((w) => (w.id === cleaned.id ? cleaned : w));
       }
-      return [...prev, editingWorkout];
+      return [...prev, cleaned];
     });
     setEditingWorkout(null);
     setActiveExercisePickerIndex(null);
@@ -2320,11 +2316,11 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                           {
                             id: `ex-${Date.now()}`,
                             orderLabel: defaultLetter,
-                            name: '10 Month Position Barbell Press',
-                            note: 'offset',
-                            sets: '2-3',
-                            reps: '5-10',
-                            weight: '____',
+                            name: '',
+                            note: '',
+                            sets: '',
+                            reps: '',
+                            weight: '',
                             status: editingWorkout.status,
                           },
                         ],

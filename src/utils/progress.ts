@@ -148,3 +148,19 @@ export function getExerciseSummary(
 
   return { last, pr, isNewPr };
 }
+
+/* ---------- Display ---------- */
+
+/** TrueCoach-style prescription line, using exactly what the coach typed: "2-3 sets 5-10 reps · 135 lb". */
+export function formatPrescription(ex: {
+  sets?: number;
+  setsText?: string;
+  reps?: string;
+  intensity?: string;
+}): string {
+  const sets = (ex.setsText ?? (ex.sets ? String(ex.sets) : '')).trim();
+  const reps = (ex.reps ?? '').trim();
+  const parts = [sets && `${sets} sets`, reps && `${reps} reps`].filter(Boolean).join(' ');
+  const weight = (ex.intensity ?? '').trim();
+  return [parts, weight].filter(Boolean).join(' · ');
+}

@@ -24,7 +24,11 @@ import {
   ThemeMode,
 } from '../types';
 import { ExerciseResultLogger } from './ExerciseResultLogger';
-import { buildExerciseHistory, getExerciseSummary } from '../utils/progress';
+import {
+  buildExerciseHistory,
+  getExerciseSummary,
+  formatPrescription,
+} from '../utils/progress';
 import {
   getOrCreateDayWorkout,
   getTodayDateString,
@@ -344,8 +348,15 @@ export const ClientView: React.FC<ClientViewProps> = ({
               </div>
             ) : (
               activeDayWorkout.exercises.map((ex) => (
+                <React.Fragment key={ex.id}>
+                {ex.orderLabel && (
+                  <div className="flex justify-center">
+                    <span className="px-2.5 py-0.5 rounded-md bg-neutral-200 text-neutral-600 text-[11px] font-bold">
+                      {ex.orderLabel}
+                    </span>
+                  </div>
+                )}
                 <div
-                  key={ex.id}
                   className="bg-white rounded-3xl p-4 shadow-2xs border border-neutral-200/60 overflow-hidden"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -374,9 +385,13 @@ export const ClientView: React.FC<ClientViewProps> = ({
                         <Play className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                       </button>
                       <div className="text-xs text-neutral-500 mt-0.5 truncate">
-                        {ex.sets} sets × {ex.reps}
-                        {ex.intensity ? ` · ${ex.intensity}` : ''}
+                        {formatPrescription(ex)}
                       </div>
+                      {ex.notes && (
+                        <div className="text-xs text-neutral-400 mt-0.5 italic truncate">
+                          {ex.notes}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -392,6 +407,7 @@ export const ClientView: React.FC<ClientViewProps> = ({
                     />
                   )}
                 </div>
+                </React.Fragment>
               ))
             )}
 

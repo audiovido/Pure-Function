@@ -35,6 +35,7 @@ import {
   ThemeMode,
 } from '../types';
 import { EMPTY_CLIENT } from '../data/emptyClient';
+import { formatPrescription } from '../utils/progress';
 import {
   getOrCreateDayWorkout,
   getTodayDateString,
@@ -1415,7 +1416,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
                         <Play className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                       </button>
                       <div className="text-xs text-neutral-500 mt-0.5 truncate">
-                        {ex.sets} sets × {ex.reps}
+                        {formatPrescription(ex)}
                         {ex.actualWeight || ex.actualReps
                           ? ` · Logged ${ex.actualWeight || '—'} × ${ex.actualReps || '—'}`
                           : ''}

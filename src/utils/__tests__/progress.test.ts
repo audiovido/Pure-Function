@@ -42,3 +42,12 @@ assert.equal(getExerciseSummary(h,'Deadlift','2026-10-24').pr,undefined);
 
   });
 });
+
+import { formatPrescription } from '../progress';
+describe('formatPrescription', () => {
+  it('shows exactly what the coach typed, TrueCoach style', () => {
+    assert.equal(formatPrescription({ sets: 2, setsText: '2-3', reps: '5-10' }), '2-3 sets 5-10 reps');
+    assert.equal(formatPrescription({ sets: 3, reps: '8/8', intensity: '135 lb' }), '3 sets 8/8 reps · 135 lb');
+    assert.equal(formatPrescription({ setsText: '', reps: '' }), '');
+  });
+});
