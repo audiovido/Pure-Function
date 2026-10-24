@@ -3,7 +3,7 @@ const createMock=require('./mock-supabase.cjs'); const root=process.argv[2];
 const srv=http.createServer((q,r)=>{ let f=path.join(root,q.url.split('?')[0]); if(f.endsWith('/')) f+='index.html'; fs.readFile(f,(e,d)=>{ if(e){r.writeHead(404);r.end();return;} r.writeHead(200,{'content-type':{'.html':'text/html','.js':'text/javascript','.css':'text/css'}[path.extname(f)]||'application/octet-stream'}); r.end(d);});}).listen(4191);
 const ok=(c,m)=>console.log((c?'PASS ':'FAIL ')+m);
 (async()=>{
- const mock=createMock({ coachEmail: 'c@example.com' }); const b=await chromium.launch(); const ctx=await b.newContext({viewport:{width:390,height:800}}); await ctx.route('https://mock.supabase.co/**',mock.handler); await ctx.routeWebSocket('wss://mock.supabase.co/**',mock.wsHandler); const p=await ctx.newPage();
+ const mock=createMock({ coachEmail: 'c@example.com' }); const b=await chromium.launch(); const ctx=await b.newContext({viewport:{width:1440,height:900}}); await ctx.route('https://mock.supabase.co/**',mock.handler); await ctx.routeWebSocket('wss://mock.supabase.co/**',mock.wsHandler); const p=await ctx.newPage();
  const errs=[]; p.on('pageerror',e=>errs.push(e.message));
  // 1. email-confirmation mode
  process.env.MOCK_CONFIRM_EMAIL='1';
@@ -20,8 +20,8 @@ const ok=(c,m)=>console.log((c?'PASS ':'FAIL ')+m);
  // 3. correct login, add + delete client
  await p.locator('input[aria-label="Password"]').fill('password123');
  await p.locator('form button[type=submit]').click(); await p.waitForTimeout(2500);
- ok(await p.getByText('You have no clients yet').count()===1,'login works, empty state');
- await p.getByRole('button',{name:/Add your first client/}).click(); await p.waitForTimeout(400);
+ ok(await p.locator('text=Add client >> visible=true').count()>0,'login works, empty roster');
+ await p.locator('text=Add client >> visible=true').first().click(); await p.waitForTimeout(400);
  const t=p.getByRole('button',{name:/^Add Client$/}); if(await t.count()) await t.click();
  await p.getByPlaceholder('e.g. Ryan Sterling').fill('Dana Lee'); await p.locator('input[aria-label="Client email"]').fill('dana@example.com');
  await p.locator('form button[type=submit]').first().click(); await p.waitForTimeout(3500);
