@@ -1,5 +1,5 @@
 const { chromium } = require('playwright'); const http=require('http'); const fs=require('fs'); const path=require('path');
-const createMock=require('./mock-supabase.js');
+const createMock=require('./mock-supabase.cjs');
 const root=process.argv[2];
 const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.webmanifest':'application/manifest+json'};
 const srv=http.createServer((q,r)=>{ let f=path.join(root,q.url.split('?')[0]); if(f.endsWith('/')) f+='index.html';
@@ -7,7 +7,7 @@ const srv=http.createServer((q,r)=>{ let f=path.join(root,q.url.split('?')[0]); 
 const ok=(c,m)=>console.log((c?'PASS ':'FAIL ')+m);
 (async()=>{
  const mock=createMock(); const b=await chromium.launch();
- const mk=async()=>{ const ctx=await b.newContext({viewport:{width:390,height:800}}); await ctx.route('https://mock.supabase.co/**',mock.handler); const p=await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{ if(m.type()==='error'&&!/fonts|net::ERR|Failed to load resource/.test(m.text())) errs.push('console: '+m.text()); }); return {ctx,p,errs}; };
+ const mk=async()=>{ const ctx=await b.newContext({viewport:{width:390,height:800}}); await ctx.route('https://mock.supabase.co/**',mock.handler); await ctx.routeWebSocket('wss://mock.supabase.co/**',mock.wsHandler); const p=await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{ if(m.type()==='error'&&!/fonts|net::ERR|Failed to load resource/.test(m.text())) errs.push('console: '+m.text()); }); return {ctx,p,errs}; };
 
  // ---- Trainer signs up
  const T=await mk(); const p=T.p;

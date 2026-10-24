@@ -12,6 +12,24 @@ import {
  * the latest data on startup. All functions are no-ops when Supabase is not configured.
  */
 
+/** JSON with sorted keys: jsonb returns keys in a different order than we sent them. */
+export function stableStringify(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(stableStringify).join(',')}]`;
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>;
+    return `{${Object.keys(o)
+      .sort()
+      .filter((k) => o[k] !== undefined)
+      .map((k) => `${JSON.stringify(k)}:${stableStringify(o[k])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(v) ?? 'null';
+}
+
+export function isSameData(a: unknown, b: unknown): boolean {
+  return stableStringify(a) === stableStringify(b);
+}
+
 // last JSON pushed per row, so we only upsert what changed
 const pushed = new Map<string, string>();
 
@@ -45,7 +63,7 @@ export async function pushClients(clients: ClientProfile[]) {
     clients.map((c) => {
       // never send plaintext passwords to the cloud; Supabase Auth owns credentials
       const { password: _pw, ...safe } = c;
-      const json = JSON.stringify(safe);
+      const json = stableStringify(safe);
       return { key: c.id, json, row: { id: c.id, data: safe, updated_at: new Date().toISOString() } };
     }),
     'id'
@@ -55,7 +73,7 @@ export async function pushClients(clients: ClientProfile[]) {
 export async function pushWorkouts(map: Record<string, DayWorkout[]>) {
   const rows = Object.entries(map).flatMap(([clientId, days]) =>
     days.map((d) => {
-      const json = JSON.stringify(d);
+      const json = stableStringify(d);
       return {
         key: `${clientId}:${d.date}`,
         json,
@@ -71,7 +89,7 @@ export async function pushNutrition(
 ) {
   const rows = Object.entries(map).flatMap(([clientId, days]) =>
     Object.values(days).map((d) => {
-      const json = JSON.stringify(d);
+      const json = stableStringify(d);
       return {
         key: `${clientId}:${d.date}`,
         json,
@@ -85,7 +103,7 @@ export async function pushNutrition(
 export async function pushMessages(map: Record<string, DirectMessage[]>) {
   const rows = Object.entries(map).flatMap(([clientId, msgs]) =>
     msgs.map((m) => {
-      const json = JSON.stringify(m);
+      const json = stableStringify(m);
       return {
         key: m.id,
         json,
@@ -135,15 +153,15 @@ export async function pullAll(): Promise<CloudSnapshot | null> {
   Object.values(workouts).forEach((l) => l.sort((a, b) => a.date.localeCompare(b.date)));
   const clients = (c.data ?? []).map((r: any) => r.data as ClientProfile);
   // seed push-cache so we don't immediately re-upload what we just downloaded
-  clients.forEach((x) => pushed.set(`clients:${x.id}`, JSON.stringify(x)));
+  clients.forEach((x) => pushed.set(`clients:${x.id}`, stableStringify(x)));
   (w.data ?? []).forEach((r: any) =>
-    pushed.set(`workouts:${r.client_id}:${r.data.date}`, JSON.stringify(r.data))
+    pushed.set(`workouts:${r.client_id}:${r.data.date}`, stableStringify(r.data))
   );
   (n.data ?? []).forEach((r: any) =>
-    pushed.set(`nutrition:${r.client_id}:${r.data.date}`, JSON.stringify(r.data))
+    pushed.set(`nutrition:${r.client_id}:${r.data.date}`, stableStringify(r.data))
   );
   (m.data ?? []).forEach((r: any) =>
-    pushed.set(`messages:${r.data.id}`, JSON.stringify(r.data))
+    pushed.set(`messages:${r.data.id}`, stableStringify(r.data))
   );
   return {
     clients,
@@ -173,4 +191,55 @@ export async function deleteClientCloud(clientId: string): Promise<boolean> {
     if (key === `clients:${clientId}` || key.includes(`:${clientId}:`)) pushed.delete(key);
   }
   return true;
+}
+
+/* ---------- Realtime ---------- */
+
+export interface RealtimeHandlers {
+  onMessage: (clientId: string, message: DirectMessage) => void;
+  onWorkout: (clientId: string, day: DayWorkout) => void;
+}
+
+/** Minimal shape of the Supabase client used here (lets tests pass a fake). */
+export interface RealtimeCapableClient {
+  channel: (name: string) => {
+    on: (type: 'postgres_changes', filter: Record<string, string>, cb: (p: any) => void) => any;
+    subscribe: () => any;
+  };
+  removeChannel: (ch: any) => unknown;
+}
+
+/**
+ * Live updates from other devices. Rows we receive are recorded in the push cache,
+ * so applying them to state never triggers an upload (no echo loops).
+ * Row Level Security also applies here: a client only receives their own rows.
+ */
+export function attachRealtime(
+  client: RealtimeCapableClient | null,
+  handlers: RealtimeHandlers
+): () => void {
+  if (!client) return () => {};
+  const channel = client.channel('pf-live');
+  const table = (t: string, cb: (row: any) => void) =>
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: t }, (payload: any) => {
+      if (payload.eventType === 'DELETE' || !payload.new) return;
+      cb(payload.new);
+    });
+
+  table('messages', (row) => {
+    pushed.set(`messages:${row.id}`, stableStringify(row.data));
+    handlers.onMessage(row.client_id, row.data as DirectMessage);
+  });
+  table('workouts', (row) => {
+    pushed.set(`workouts:${row.client_id}:${row.date}`, stableStringify(row.data));
+    handlers.onWorkout(row.client_id, row.data as DayWorkout);
+  });
+  channel.subscribe();
+  return () => {
+    client.removeChannel(channel);
+  };
+}
+
+export function subscribeRealtime(handlers: RealtimeHandlers): () => void {
+  return attachRealtime(supabase as unknown as RealtimeCapableClient | null, handlers);
 }

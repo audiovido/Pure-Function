@@ -63,7 +63,9 @@ module.exports = function createMock() {
         for (const r of arr) {
           if (!own(r) && !(isTrainer)) return json(route, 403, { message: 'RLS violation' });
           const ks = keys[table]; const i = rows.findIndex(x => ks.every(k => x[k] === r[k]));
+          const type = i >= 0 ? 'UPDATE' : 'INSERT';
           if (i >= 0) rows[i] = { ...rows[i], ...r }; else rows.push(r);
+          broadcast(table, type, i >= 0 ? rows[i] : r);
         }
         return route.fulfill({ status: 201, headers: cors, body: '' });
       }
@@ -75,5 +77,46 @@ module.exports = function createMock() {
     }
     return json(route, 404, { message: 'unmocked ' + path });
   }
-  return { db, log, handler };
+  /* ---- Realtime (Phoenix protocol, vsn 2.0.0: [join_ref, ref, topic, event, payload]) ---- */
+  const sockets = new Set();
+  const canSee = (uid, table, row) => {
+    const prof = db.profiles.find(p => p.id === uid);
+    if (!prof) return false;
+    if (prof.role === 'trainer') return true;
+    return row.client_id === prof.client_id;
+  };
+  function broadcast(table, type, record) {
+    for (const s of sockets) {
+      for (const sub of s.subs) {
+        const b = sub.bindings.find(x => x.table === table);
+        if (!b || !canSee(s.uid, table, record)) continue;
+        const columns = Object.keys(record).map(name => ({ name, type: name === 'data' ? 'jsonb' : 'text' }));
+        s.ws.send(JSON.stringify([sub.joinRef, null, sub.topic, 'postgres_changes',
+          { ids: [b.id], data: { type, schema: 'public', table, commit_timestamp: new Date().toISOString(), errors: null, columns, record } }]));
+        realtimeLog.push(`${type} ${table} -> ${s.uid.slice(0, 8)}`);
+      }
+    }
+  }
+  const realtimeLog = [];
+  function wsHandler(ws) {
+    const s = { ws, uid: null, subs: [] };
+    sockets.add(s);
+    ws.onClose(() => sockets.delete(s));
+    ws.onMessage(raw => {
+      const [joinRef, ref, topic, event, payload] = JSON.parse(String(raw));
+      const reply = (response) => ws.send(JSON.stringify([joinRef, ref, topic, 'phx_reply', { status: 'ok', response }]));
+      if (topic === 'phoenix' && event === 'heartbeat') return reply({});
+      if (event === 'access_token') { const m = String(payload.access_token || '').match(/tok-(.+)$/); if (m) s.uid = m[1]; return; }
+      if (event === 'phx_join') {
+        const m = String(payload.access_token || '').match(/tok-(.+)$/); if (m) s.uid = m[1];
+        const pc = (payload.config && payload.config.postgres_changes) || [];
+        const bindings = pc.map((f, i) => ({ id: 1000 + i, event: f.event, schema: f.schema, table: f.table, filter: f.filter }));
+        s.subs.push({ joinRef, topic, bindings });
+        return reply({ postgres_changes: bindings });
+      }
+      if (event === 'phx_leave') { s.subs = s.subs.filter(x => x.topic !== topic); return reply({}); }
+    });
+  }
+
+  return { db, log, handler, wsHandler, broadcast, realtimeLog };
 };

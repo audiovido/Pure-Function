@@ -74,5 +74,10 @@ create policy "nutrition self all"    on public.nutrition for all using (client_
 create policy "messages trainer all" on public.messages for all using (public.is_trainer()) with check (public.is_trainer());
 create policy "messages self all"    on public.messages for all using (client_id = public.my_client_id()) with check (client_id = public.my_client_id());
 
--- Realtime for chat
-alter publication supabase_realtime add table public.messages;
+-- Realtime: chat messages and workout edits show up live on other devices.
+do $$ begin
+  alter publication supabase_realtime add table public.messages;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.workouts;
+exception when duplicate_object then null; end $$;

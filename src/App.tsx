@@ -45,6 +45,8 @@ import {
   pushMessages,
   pullAll,
   deleteClientCloud,
+  subscribeRealtime,
+  isSameData,
 } from './services/cloudSync';
 import { getCurrentAccount, signOutCloud } from './services/authService';
 import { isSupabaseConfigured } from './services/supabaseClient';
@@ -265,6 +267,30 @@ export default function App() {
     setSyncError(false);
     void signOutCloud();
   };
+
+  // Cloud mode: live updates (new messages, workout edits from other devices)
+  useEffect(() => {
+    if (!isSupabaseConfigured || !cloudReady) return;
+    return subscribeRealtime({
+      onMessage: (clientId, msg) =>
+        setMessagesMap((prev) => {
+          const list = prev[clientId] ?? [];
+          if (list.some((m) => m.id === msg.id)) return prev;
+          return { ...prev, [clientId]: [...list, msg] };
+        }),
+      onWorkout: (clientId, day) =>
+        setClientWorkoutsMap((prev) => {
+          const list = prev[clientId] ?? [];
+          const i = list.findIndex((d) => d.date === day.date);
+          if (i >= 0 && isSameData(list[i], day)) return prev;
+          const next = [...list];
+          if (i >= 0) next[i] = day;
+          else next.push(day);
+          next.sort((a, b) => a.date.localeCompare(b.date));
+          return { ...prev, [clientId]: next };
+        }),
+    });
+  }, [cloudReady]);
 
   // Cloud mode: restore an existing Supabase session on page load
   useEffect(() => {
