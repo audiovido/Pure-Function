@@ -9,6 +9,12 @@ export interface Exercise {
   rest: string;
   notes: string;
   completed?: boolean;
+  /** trainer marked this exercise as missed */
+  missed?: boolean;
+  /** workout position label, e.g. "A1", "B" */
+  orderLabel?: string;
+  /** prescribed sets as typed by the trainer, e.g. "2-3" (sets holds the numeric version) */
+  setsText?: string;
   category?: 'Lower body' | 'Upper body' | 'Core' | 'Mobility' | 'Conditioning';
   durationSeconds?: number;
   videoDurationText?: string;

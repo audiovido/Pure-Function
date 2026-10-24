@@ -376,6 +376,17 @@ export default function App() {
     );
   };
 
+  // Handler: trainer workspace edits a client's workouts
+  const handleUpdateClientWorkouts = (
+    clientId: string,
+    updater: (prev: DayWorkout[]) => DayWorkout[]
+  ) => {
+    setClientWorkoutsMap((prev) => ({
+      ...prev,
+      [clientId]: updater(prev[clientId] ?? []),
+    }));
+  };
+
   // Handler: Client completes daily workout session check-in
   const handleCompleteSession = (
     date: string,
@@ -712,6 +723,7 @@ export default function App() {
             onDeleteClient={handleDeleteClient}
             workouts={workouts}
             allClientWorkouts={clientWorkoutsMap}
+            onUpdateClientWorkouts={handleUpdateClientWorkouts}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
             onOpenVideo={(ex) => setVideoExercise(ex)}

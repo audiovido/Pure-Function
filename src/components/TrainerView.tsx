@@ -66,6 +66,10 @@ interface TrainerViewProps {
   onDeleteClient?: (clientId: string) => void;
   workouts: DayWorkout[];
   allClientWorkouts?: Record<string, DayWorkout[]>;
+  onUpdateClientWorkouts?: (
+    clientId: string,
+    updater: (prev: DayWorkout[]) => DayWorkout[]
+  ) => void;
   selectedDate: string;
   onSelectDate: (date: string) => void;
   onOpenVideo: (exercise: Exercise) => void;
@@ -178,6 +182,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
   onUpdateClient,
   workouts,
   allClientWorkouts = {},
+  onUpdateClientWorkouts,
   selectedDate,
   onSelectDate,
   onOpenVideo,
@@ -559,6 +564,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
         onOpenVideo={onOpenVideo}
         onAddExerciseClick={onAddExerciseClick}
         allClientWorkouts={allClientWorkouts}
+        onUpdateClientWorkouts={onUpdateClientWorkouts}
         activeAccount={activeAccount}
         onSignOut={onSignOut}
         activeNav={desktopNav}
