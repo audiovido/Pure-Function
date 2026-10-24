@@ -128,6 +128,16 @@ function formatIso(dt: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+// Client tabs that only show sample data (no real documents/photos/wearables/billing yet):
+// visible in the offline demo, hidden for real (cloud) accounts
+type SidebarItem = {
+  id: ClientSidebarTab;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  hasGreenDot?: boolean;
+};
+const DEMO_ONLY_TABS = new Set<string>(['documents', 'pictures', 'wearables', 'billing']);
+
 // Sample data shown only in the offline demo (real accounts start empty)
 const DEMO_GOALS = [
   {
@@ -268,12 +278,12 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
     (isSupabaseConfigured ? [] : DEMO_GOALS));
   const [newGoalTitle, setNewGoalTitle] = useState('');
 
-  const [macroTargets, setMacroTargets] = useState({
-    protein: 155,
-    carbs: 230,
-    fat: 65,
-    calories: 2125,
-  });
+  const [macroTargets, setMacroTargets] = useState(() => ({
+    protein: client.macroTargets?.protein ?? (isSupabaseConfigured ? 0 : 155),
+    carbs: client.macroTargets?.carbs ?? (isSupabaseConfigured ? 0 : 230),
+    fat: client.macroTargets?.fat ?? (isSupabaseConfigured ? 0 : 65),
+    calories: client.macroTargets?.calories ?? (isSupabaseConfigured ? 0 : 2125),
+  }));
 
   const [clientMetrics, setClientMetrics] = useState(() =>
     (client.coachMetrics as typeof DEMO_METRICS | undefined) ??
@@ -305,9 +315,11 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
       coachMetrics: clientMetrics,
       coachNotesList: coachNotes,
       equipment: clientEquipment,
+      // the same targets the client sees on their Habits screen
+      macroTargets: { waterLiters: client.macroTargets?.waterLiters ?? 0, ...macroTargets },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientGoals, clientMetrics, coachNotes, clientEquipment]);
+  }, [clientGoals, clientMetrics, coachNotes, clientEquipment, macroTargets]);
 
   const [chatHistory, setChatHistory] = useState(isSupabaseConfigured ? [] : [
     {
@@ -641,7 +653,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
     label: string;
     icon: React.ComponentType<{ className?: string }>;
     hasGreenDot?: boolean;
-  }[] = [
+  }[] = ([
     { id: 'workouts', label: 'Workouts', icon: Apple, hasGreenDot: true },
     { id: 'goals', label: 'Goals', icon: Target },
     { id: 'nutrition', label: 'Nutrition', icon: Utensils },
@@ -653,19 +665,19 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
     { id: 'equipment', label: 'Equipment', icon: Dumbbell },
     { id: 'exerciseSearch', label: 'Exercise History', icon: Search },
     { id: 'wearables', label: 'Wearables', icon: Watch, hasGreenDot: true },
-  ];
+  ] as SidebarItem[]).filter((item) => !isSupabaseConfigured || !DEMO_ONLY_TABS.has(item.id));
 
   const sidebarBottomItems: {
     id: ClientSidebarTab;
     label: string;
     icon: React.ComponentType<{ className?: string }>;
-  }[] = [
+  }[] = ([
     { id: 'settings', label: 'Client Settings', icon: UserCog },
     { id: 'billing', label: 'Payment & Billing', icon: CreditCard },
-  ];
+  ] as SidebarItem[]).filter((item) => !isSupabaseConfigured || !DEMO_ONLY_TABS.has(item.id));
 
   return (
-    <div className="flex-1 min-h-0 flex w-full overflow-hidden bg-[#f4f5f7]">
+    <div className="flex-1 min-w-0 min-h-0 flex w-full overflow-hidden bg-[#f4f5f7]">
       {/* =========================================================
           SECONDARY COLLAPSIBLE CLIENT SIDEBAR (TrueCoach Client Rail)
          ========================================================= */}
@@ -900,7 +912,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 1: WORKOUTS WEEKLY CALENDAR (Screenshot Match)
            --------------------------------------------------------- */}
         {activeTab === 'workouts' && (
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
             {/* Top Calendar Toolbar */}
             <div className="shrink-0 px-4 py-2.5 bg-[#f4f5f7] border-b border-neutral-200/80 flex flex-wrap items-center justify-between gap-3">
               {/* Left controls: Today dropdown, < >, Month Year */}
@@ -1164,7 +1176,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             </div>
 
             {/* Multi-Day Weekly Column Grid (MON 19 .. SAT 24 / SUN 25) */}
-            <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto px-3 pb-4 pt-1">
+            <div className="flex-1 min-w-0 min-h-0 overflow-x-auto overflow-y-auto px-3 pb-4 pt-1">
               <div
                 className={`${
                   isMobile ? '' : 'min-w-[920px] h-full'
@@ -1285,7 +1297,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                       </div>
 
                       {/* Day Column Content Area */}
-                      <div className="flex-1 p-2 space-y-2.5">
+                      <div className="flex-1 min-w-0 p-2 space-y-2.5">
                         {dayWorkouts.length === 0 ? (
                           <div
                             onClick={() => handleOpenAddWorkoutForDay(day.iso)}
@@ -1494,7 +1506,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 2: DIRECT MESSAGES WITH CLIENT
            --------------------------------------------------------- */}
         {activeTab === 'messages' && (
-          <div className="flex-1 min-h-0 flex flex-col p-6 max-w-4xl mx-auto w-full">
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col p-6 max-w-4xl mx-auto w-full">
             <div className="bg-white rounded-3xl border border-neutral-200/90 shadow-2xs flex-1 min-h-0 flex flex-col overflow-hidden">
               <div className="px-6 py-4 bg-[#252a36] text-white flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1515,7 +1527,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-[#f8f9fa]">
+              <div className="flex-1 min-w-0 overflow-y-auto p-5 space-y-3 bg-[#f8f9fa]">
                 {(messages
                   ? messages.map((m) => ({
                       id: m.id,
@@ -1590,7 +1602,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 3: CLIENT GOALS
            --------------------------------------------------------- */}
         {activeTab === 'goals' && (
-          <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8">
             <div className="max-w-4xl mx-auto space-y-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -1627,11 +1639,11 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                   value={newGoalTitle}
                   onChange={(e) => setNewGoalTitle(e.target.value)}
                   placeholder="Add a new goal for this client (e.g. Back Squat 100kg)..."
-                  className="flex-1 px-3.5 py-2 rounded-xl border border-neutral-300 text-xs sm:text-sm outline-none focus:border-amber-400"
+                  className="flex-1 min-w-0 px-3.5 py-2 rounded-xl border border-neutral-300 text-xs sm:text-sm outline-none focus:border-amber-400"
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs cursor-pointer"
+                  className="shrink-0 whitespace-nowrap px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs cursor-pointer"
                 >
                   + Add Goal
                 </button>
@@ -1692,7 +1704,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 4: NUTRITION & MACROS
            --------------------------------------------------------- */}
         {activeTab === 'nutrition' && (
-          <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8">
             <div className="max-w-4xl mx-auto space-y-6">
               <h1 className="text-xl font-black text-neutral-900">
                 {client.name} — Nutrition & Macro Targets
@@ -1735,7 +1747,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 5: METRICS
            --------------------------------------------------------- */}
         {activeTab === 'metrics' && (
-          <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8">
             <div className="max-w-4xl mx-auto space-y-5">
               <h1 className="text-xl font-black text-neutral-900">
                 {client.name} — Performance & Body Metrics
@@ -1765,7 +1777,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                   value={newMetricName}
                   onChange={(e) => setNewMetricName(e.target.value)}
                   placeholder="Metric name (e.g. Back Squat 1RM)"
-                  className="flex-1 min-w-[180px] px-3.5 py-2 rounded-xl border border-neutral-300 text-xs"
+                  className="flex-1 min-w-0 min-w-[180px] px-3.5 py-2 rounded-xl border border-neutral-300 text-xs"
                 />
                 <input
                   type="text"
@@ -1783,7 +1795,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-amber-400 text-black font-bold text-xs cursor-pointer"
+                  className="shrink-0 whitespace-nowrap px-4 py-2 rounded-xl bg-amber-400 text-black font-bold text-xs cursor-pointer"
                 >
                   Log Metric
                 </button>
@@ -1816,7 +1828,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 6: LIMITATIONS & COACH NOTES
            --------------------------------------------------------- */}
         {activeTab === 'notes' && (
-          <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8">
             <div className="max-w-4xl mx-auto space-y-5">
               <h1 className="text-xl font-black text-neutral-900">
                 {client.name} — Injuries, Limitations & Coach Notes
@@ -1856,7 +1868,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-amber-400 text-black font-bold text-xs cursor-pointer"
+                  className="shrink-0 whitespace-nowrap px-4 py-2 rounded-xl bg-amber-400 text-black font-bold text-xs cursor-pointer"
                 >
                   Save Note
                 </button>
@@ -1887,7 +1899,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 7: DOCUMENTS
            --------------------------------------------------------- */}
         {activeTab === 'documents' && (
-          <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8">
             <div className="max-w-4xl mx-auto space-y-4">
               <h1 className="text-xl font-black text-neutral-900">
                 {client.name} — Shared Documents
@@ -1923,7 +1935,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 8: SKELETON / 4-WEEK PROGRAM OVERVIEW
            --------------------------------------------------------- */}
         {activeTab === 'skeleton' && (
-          <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8">
             <div className="max-w-5xl mx-auto space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -1937,7 +1949,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTab('workouts')}
-                  className="px-4 py-2 rounded-xl bg-amber-400 text-black font-bold text-xs cursor-pointer"
+                  className="shrink-0 whitespace-nowrap px-4 py-2 rounded-xl bg-amber-400 text-black font-bold text-xs cursor-pointer"
                 >
                   Full Calendar View
                 </button>
@@ -1984,7 +1996,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 9: PROGRESS PICTURES
            --------------------------------------------------------- */}
         {activeTab === 'pictures' && (
-          <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8">
             <div className="max-w-4xl mx-auto space-y-4">
               <h1 className="text-xl font-black text-neutral-900">
                 {client.name} — Progress Pictures
@@ -2015,7 +2027,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 10: EQUIPMENT
            --------------------------------------------------------- */}
         {activeTab === 'equipment' && (
-          <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8">
             <div className="max-w-4xl mx-auto space-y-5">
               <h1 className="text-xl font-black text-neutral-900">
                 {client.name} — Available Training Equipment
@@ -2034,13 +2046,13 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                   value={newEquipItem}
                   onChange={(e) => setNewEquipItem(e.target.value)}
                   placeholder="Add equipment (e.g. GHD Machine, Assault Bike)..."
-                  className="flex-1 px-3.5 py-2 rounded-xl border border-neutral-300 text-xs"
+                  className="flex-1 min-w-0 px-3.5 py-2 rounded-xl border border-neutral-300 text-xs"
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-amber-400 text-black font-bold text-xs cursor-pointer"
+                  className="shrink-0 whitespace-nowrap px-4 py-2 rounded-xl bg-amber-400 text-black font-bold text-xs cursor-pointer"
                 >
-                  + Add Equipment
+                  + Add
                 </button>
               </form>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2073,7 +2085,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 11: CLIENT EXERCISE HISTORY SEARCH
            --------------------------------------------------------- */}
         {activeTab === 'exerciseSearch' && (
-          <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8">
             <div className="max-w-4xl mx-auto space-y-5">
               <h1 className="text-xl font-black text-neutral-900">
                 {client.name} — Exercise History Lookup
@@ -2085,7 +2097,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                   value={clientHistoryQuery}
                   onChange={(e) => setClientHistoryQuery(e.target.value)}
                   placeholder="Search assigned exercises (e.g. Snatch, Push Press, Squat)..."
-                  className="flex-1 text-xs sm:text-sm outline-none"
+                  className="flex-1 min-w-0 text-xs sm:text-sm outline-none"
                 />
               </div>
 
@@ -2114,7 +2126,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs font-bold text-neutral-800">{item.dateIso}</div>
+                        <div className="text-xs font-bold text-neutral-800 whitespace-nowrap">{item.dateIso}</div>
                         <span
                           className={`text-[10px] font-bold uppercase ${
                             item.status === 'completed'
@@ -2138,7 +2150,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 12: WEARABLES & HEALTH SYNC
            --------------------------------------------------------- */}
         {activeTab === 'wearables' && (
-          <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8">
             <div className="max-w-4xl mx-auto space-y-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -2182,7 +2194,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 13: CLIENT SETTINGS / PROFILE EDITOR
            --------------------------------------------------------- */}
         {activeTab === 'settings' && (
-          <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -2282,7 +2294,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             TAB 14: CLIENT BILLING & SUBSCRIPTIONS
            --------------------------------------------------------- */}
         {activeTab === 'billing' && (
-          <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="flex-1 min-w-0 overflow-y-auto p-6 lg:p-8">
             <div className="max-w-3xl mx-auto bg-white rounded-3xl border border-neutral-200 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -2358,7 +2370,7 @@ export const TrainerClientWorkspace: React.FC<TrainerClientWorkspaceProps> = ({
             </div>
 
             {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+            <div className="flex-1 min-w-0 overflow-y-auto p-6 space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-neutral-700 mb-1">

@@ -1,7 +1,7 @@
 /* Pure Function service worker: lets the app open offline.
  * Network-first for same-origin GETs, falling back to cache.
  * Cross-origin requests (Supabase, fonts, video) are never touched. */
-const CACHE = 'pf-shell-v1';
+const CACHE = 'pf-shell-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -25,7 +25,9 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
 
   event.respondWith(
-    fetch(req)
+    // page loads skip the browser HTTP cache (GitHub Pages caches for 10 min), so a new
+    // version shows on the next open; hashed assets can use the normal cache
+    fetch(req.mode === 'navigate' ? new Request(req, { cache: 'no-store' }) : req)
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();
