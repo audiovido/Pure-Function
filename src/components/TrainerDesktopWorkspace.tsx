@@ -25,11 +25,13 @@ import {
   Play,
   SlidersHorizontal,
   X,
+  User as UserIcon,
 } from 'lucide-react';
 import {
   AuthAccount,
   ClientProfile,
   DayWorkout,
+  DirectMessage,
   Exercise,
 } from '../types';
 import {
@@ -98,6 +100,8 @@ interface TrainerDesktopWorkspaceProps {
   onOpenVideo: (exercise: Exercise) => void;
   onAddExerciseClick?: () => void;
   allClientWorkouts?: Record<string, DayWorkout[]>;
+  allClientMessages?: Record<string, DirectMessage[]>;
+  onSendClientMessage?: (clientId: string, text: string) => void;
   onUpdateClientWorkouts?: (
     clientId: string,
     updater: (prev: DayWorkout[]) => DayWorkout[]
@@ -233,6 +237,8 @@ export const TrainerDesktopWorkspace: React.FC<
     unreadActivityCount = 1,
     allClientWorkouts,
     onUpdateClientWorkouts,
+    allClientMessages,
+    onSendClientMessage,
     children,
   } = rest;
 
@@ -260,7 +266,7 @@ export const TrainerDesktopWorkspace: React.FC<
   const [desktopClientInitialTab, setDesktopClientInitialTab] =
     useState<ClientSidebarTab>('workouts');
   const [isManageGroupsOpen, setIsManageGroupsOpen] = useState(false);
-  const [availableGroups, setAvailableGroups] = useState<string[]>([
+  const [availableGroups, setAvailableGroups] = useState<string[]>(isSupabaseConfigured ? [] : [
     'Morning Group',
     'Strength & Mobility',
     'In-Person Studio',
@@ -295,7 +301,7 @@ export const TrainerDesktopWorkspace: React.FC<
   // Library -> Warmups state (Exact rows from Screenshot 3)
   const [warmupsList, setWarmupsList] = useState<
     { id: string; name: string; instructions: string }[]
-  >([
+  >(isSupabaseConfigured ? [] : [
     {
       id: 'wm-1',
       name: 'Dynamic Warmup 1.0',
@@ -330,7 +336,7 @@ export const TrainerDesktopWorkspace: React.FC<
   // Library -> Cooldowns state
   const [cooldownsList, setCooldownsList] = useState<
     { id: string; name: string; instructions: string }[]
-  >([
+  >(isSupabaseConfigured ? [] : [
     {
       id: 'cd-1',
       name: '90/90 Parasympathetic Downregulation',
@@ -354,7 +360,7 @@ export const TrainerDesktopWorkspace: React.FC<
       metricsCount: number;
       assignmentsCount: number;
     }[]
-  >([
+  >(isSupabaseConfigured ? [] : [
     {
       id: 'ms-1',
       name: 'Barbell Exercises',
@@ -430,7 +436,7 @@ export const TrainerDesktopWorkspace: React.FC<
   // Library -> Documents state
   const [documentsList, setDocumentsList] = useState<
     { id: string; name: string; sharedWith: string; updated: string }[]
-  >([
+  >(isSupabaseConfigured ? [] : [
     {
       id: 'doc-1',
       name: 'Pure Function Welcome & Movement Guide.pdf',
@@ -456,7 +462,7 @@ export const TrainerDesktopWorkspace: React.FC<
       activeClients: number;
       tags: string[];
     }[]
-  >([
+  >(isSupabaseConfigured ? [] : [
     {
       id: 'prog-1',
       days: 5,
@@ -771,7 +777,7 @@ export const TrainerDesktopWorkspace: React.FC<
     <div className="bg-white rounded-2xl border border-neutral-200/90 shadow-2xs overflow-visible">
       {/* Table Header */}
       <div className="bg-[#252a36] text-white px-4 py-3 rounded-t-2xl grid grid-cols-12 items-center gap-3 text-xs font-bold">
-        <div className="col-span-5 sm:col-span-4 flex items-center gap-3">
+        <div className="col-span-7 sm:col-span-4 flex items-center gap-3">
           <input
             type="checkbox"
             checked={
@@ -792,9 +798,9 @@ export const TrainerDesktopWorkspace: React.FC<
             <span className="text-[10px] text-amber-400">▲</span>
           </span>
         </div>
-        <div className="col-span-3 sm:col-span-2">Due</div>
+        <div className="col-span-4 sm:col-span-2">Due</div>
         <div className="hidden sm:block sm:col-span-3">Compliance rate</div>
-        <div className="col-span-4 sm:col-span-3">Groups</div>
+        <div className="hidden sm:block sm:col-span-3">Groups</div>
       </div>
 
       {/* Table Body */}
@@ -813,17 +819,15 @@ export const TrainerDesktopWorkspace: React.FC<
                 key={client.id}
                 onClick={() => {
                   onSelectClient(client.id);
-                  if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+                  {
                     setDesktopClientInitialTab('workouts');
                     setDesktopClientId(client.id);
-                  } else {
-                    onOpenClientProfile(client.id);
                   }
                 }}
                 className="px-4 py-3 grid grid-cols-12 items-center gap-3 hover:bg-neutral-50/90 transition-colors cursor-pointer relative"
               >
                 {/* Name & Avatar */}
-                <div className="col-span-5 sm:col-span-4 flex items-center gap-3 min-w-0">
+                <div className="col-span-7 sm:col-span-4 flex items-center gap-3 min-w-0">
                   <input
                     type="checkbox"
                     checked={isChecked}
@@ -854,7 +858,7 @@ export const TrainerDesktopWorkspace: React.FC<
                 </div>
 
                 {/* Due Badge */}
-                <div className="col-span-3 sm:col-span-2 flex items-center">
+                <div className="col-span-4 sm:col-span-2 flex items-center">
                   {meta.dueType === 'orange' && (
                     <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-black font-bold text-[11px] whitespace-nowrap">
                       {meta.dueLabel}
@@ -903,7 +907,7 @@ export const TrainerDesktopWorkspace: React.FC<
 
                 {/* Groups & Row Actions */}
                 <div
-                  className="col-span-4 sm:col-span-3 flex items-center justify-between gap-2"
+                  className="col-span-1 sm:col-span-3 flex items-center justify-end sm:justify-between gap-2"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button
@@ -918,7 +922,7 @@ export const TrainerDesktopWorkspace: React.FC<
                         [client.id]: assignedGroup ? '' : nextGroup,
                       }));
                     }}
-                    className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors cursor-pointer truncate ${
+                    className={`hidden sm:block px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors cursor-pointer truncate ${
                       assignedGroup
                         ? 'border-amber-400 bg-amber-50 text-neutral-900'
                         : 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700'
@@ -948,11 +952,9 @@ export const TrainerDesktopWorkspace: React.FC<
                           onClick={() => {
                             setOpenMenuRowId(null);
                             onSelectClient(client.id);
-                            if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+                            {
                               setDesktopClientInitialTab('workouts');
                               setDesktopClientId(client.id);
-                            } else {
-                              onOpenClientProfile(client.id);
                             }
                           }}
                           className="w-full px-3.5 py-2 text-left hover:bg-neutral-100 cursor-pointer"
@@ -964,11 +966,9 @@ export const TrainerDesktopWorkspace: React.FC<
                           onClick={() => {
                             setOpenMenuRowId(null);
                             onSelectClient(client.id);
-                            if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+                            {
                               setDesktopClientInitialTab('workouts');
                               setDesktopClientId(client.id);
-                            } else {
-                              onOpenClientWorkouts(client.id);
                             }
                           }}
                           className="w-full px-3.5 py-2 text-left hover:bg-neutral-100 cursor-pointer"
@@ -980,11 +980,9 @@ export const TrainerDesktopWorkspace: React.FC<
                           onClick={() => {
                             setOpenMenuRowId(null);
                             onSelectClient(client.id);
-                            if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+                            {
                               setDesktopClientInitialTab('messages');
                               setDesktopClientId(client.id);
-                            } else {
-                              onOpenDirectChat(client.id);
                             }
                           }}
                           className="w-full px-3.5 py-2 text-left hover:bg-neutral-100 cursor-pointer"
@@ -996,11 +994,9 @@ export const TrainerDesktopWorkspace: React.FC<
                           onClick={() => {
                             setOpenMenuRowId(null);
                             onSelectClient(client.id);
-                            if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+                            {
                               setDesktopClientInitialTab('settings');
                               setDesktopClientId(client.id);
-                            } else {
-                              onOpenEditClient(client);
                             }
                           }}
                           className="w-full px-3.5 py-2 text-left hover:bg-neutral-100 cursor-pointer"
@@ -1038,7 +1034,7 @@ export const TrainerDesktopWorkspace: React.FC<
       activeNav === 'marketing');
 
   return (
-    <div className="flex-1 min-h-0 flex w-full overflow-hidden bg-[#f4f5f7]">
+    <div className="flex-1 min-h-0 flex flex-col md:flex-row w-full overflow-hidden bg-[#f4f5f7]">
       {/* =========================================================
           1. PRIMARY LEFT SIDEBAR (Starts directly from Clients, NO top icon)
          ========================================================= */}
@@ -1053,6 +1049,7 @@ export const TrainerDesktopWorkspace: React.FC<
               { id: 'clients', label: 'Clients', icon: Users },
               { id: 'library', label: 'Library', icon: BookOpen },
               { id: 'programs', label: 'Programs', icon: Calendar },
+              { id: 'messages', label: 'Messages', icon: MessageSquare },
               // Demo-only sections (no real payments/teams/marketing behind them):
               // shown in the offline demo, hidden for real (cloud) accounts.
               ...(isSupabaseConfigured
@@ -1313,7 +1310,7 @@ export const TrainerDesktopWorkspace: React.FC<
             activeNav === 'messages' ||
             activeNav === 'account'
               ? 'flex'
-              : 'flex md:hidden'
+              : 'hidden'
           }`}
         >
           {children}
@@ -1325,7 +1322,7 @@ export const TrainerDesktopWorkspace: React.FC<
           activeNav !== 'activity' &&
           activeNav !== 'messages' &&
           activeNav !== 'account' && (
-            <div className="hidden md:flex flex-1 min-h-0 flex-col overflow-hidden">
+            <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
               <TrainerClientWorkspace
                 key={`${desktopActiveClient.id}-${desktopClientInitialTab}`}
                 client={desktopActiveClient}
@@ -1340,6 +1337,12 @@ export const TrainerDesktopWorkspace: React.FC<
                 initialTab={desktopClientInitialTab}
                 workouts={allClientWorkouts?.[desktopActiveClient.id]}
                 onUpdateWorkouts={onUpdateClientWorkouts}
+                messages={allClientMessages ? allClientMessages[desktopActiveClient.id] ?? [] : undefined}
+                onSendMessage={
+                  onSendClientMessage
+                    ? (text) => onSendClientMessage(desktopActiveClient.id, text)
+                    : undefined
+                }
               />
             </div>
           )}
@@ -1350,7 +1353,7 @@ export const TrainerDesktopWorkspace: React.FC<
           activeNav !== 'activity' &&
           activeNav !== 'messages' &&
           activeNav !== 'account' && (
-            <div className="hidden md:flex flex-1 min-h-0 flex-col overflow-hidden">
+            <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
             {/* ---------------------------------------------------------
                 DESKTOP SCREEN 1: CLIENTS (Screenshot 1)
                --------------------------------------------------------- */}
@@ -3007,6 +3010,43 @@ export const TrainerDesktopWorkspace: React.FC<
           </div>
         </div>
       )}
+
+      {/* Phone: the left sidebar becomes a bottom tab bar with the same sections */}
+      <nav
+        aria-label="Coach navigation"
+        className="md:hidden shrink-0 bg-[#1a1d26] border-t border-neutral-800 grid grid-cols-5 pb-[env(safe-area-inset-bottom)]"
+      >
+        {(
+          [
+            { id: 'clients', label: 'Clients', icon: Users },
+            { id: 'library', label: 'Library', icon: BookOpen },
+            { id: 'programs', label: 'Programs', icon: Calendar },
+            { id: 'messages', label: 'Messages', icon: MessageSquare },
+            { id: 'account', label: 'Account', icon: UserIcon },
+          ] as const
+        ).map((item) => {
+          const Icon = item.icon;
+          const active = activeNav === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                setDesktopClientId(null);
+                onClearSubScreen();
+                onSelectNav(item.id);
+              }}
+              aria-current={active ? 'page' : undefined}
+              className={`flex flex-col items-center justify-center gap-1 py-2 cursor-pointer min-w-0 ${
+                active ? 'text-amber-400 font-bold' : 'text-neutral-400'
+              }`}
+            >
+              <Icon className="w-5 h-5 shrink-0" />
+              <span className="text-[10px] truncate max-w-full">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 };

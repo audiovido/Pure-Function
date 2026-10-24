@@ -524,24 +524,12 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
   };
 
   // Compute dynamic compliance percentages for the selected client
-  const complianceStats = React.useMemo(() => {
-    const completedDaysCount = clientWorkoutDays.filter(
-      (d) => getWorkoutStatus(d) === 'Completed'
-    ).length;
-    const totalRecent = Math.max(1, clientWorkoutDays.length);
-    const dynamic7d =
-      selectedClient.compliance7d ??
-      (completedDaysCount > 0
-        ? Math.min(100, Math.round((completedDaysCount / totalRecent) * 100) + 50)
-        : 100);
-    const dynamic30d = selectedClient.compliance30d ?? 55;
-    const dynamic90d = selectedClient.compliance90d ?? 32;
-    return {
-      day7: dynamic7d,
-      day30: dynamic30d,
-      day90: dynamic90d,
-    };
-  }, [clientWorkoutDays, selectedClient]);
+  // Real compliance (kept in sync from workout history in App); 0 when nothing scheduled yet
+  const complianceStats = {
+    day7: selectedClient.compliance7d ?? 0,
+    day30: selectedClient.compliance30d ?? 0,
+    day90: selectedClient.compliance90d ?? 0,
+  };
 
   const unreadActivityCount = React.useMemo(
     () =>
@@ -568,6 +556,16 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
         onAddExerciseClick={onAddExerciseClick}
         allClientWorkouts={allClientWorkouts}
         onUpdateClientWorkouts={onUpdateClientWorkouts}
+        allClientMessages={allClientMessages}
+        onSendClientMessage={
+          onSendMessage
+            ? (clientId, text) => {
+                // App sends to the selected client; the workspace already selected this one
+                onSelectClient(clientId);
+                onSendMessage(text);
+              }
+            : undefined
+        }
         activeAccount={activeAccount}
         onSignOut={onSignOut}
         activeNav={desktopNav}
@@ -1928,7 +1926,8 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
          ========================================================= */}
       <nav
         aria-label="Trainer bottom navigation"
-        className="md:hidden shrink-0 bg-white border-t border-neutral-200 px-2 py-2 grid grid-cols-5 z-30"
+        // replaced by the shared coach navigation in TrainerDesktopWorkspace
+        className="hidden"
       >
         <button
           type="button"

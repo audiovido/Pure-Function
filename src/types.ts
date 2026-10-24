@@ -151,6 +151,11 @@ export interface ClientProfile {
   macroTargets?: MacroTargets;
   fmsRecords?: FmsScreenItem[];
   programBlocks?: ProgramBlock[];
+  /** coach workspace tabs, stored on the profile so they sync like everything else */
+  coachGoals?: unknown[];
+  coachMetrics?: unknown[];
+  coachNotesList?: unknown[];
+  equipment?: string[];
 }
 
 export interface AuthAccount {

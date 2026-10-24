@@ -90,7 +90,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState<AppViewMode>('trainer');
 
   const [trainerBottomTab, setTrainerBottomTab] =
-    useState<TrainerBottomTab>('dashboard');
+    useState<TrainerBottomTab>('clients');
   const [trainerDesktopSectionLabel, setTrainerDesktopSectionLabel] =
     useState<string>('Clients');
   const [clientBottomTab, setClientBottomTab] =
