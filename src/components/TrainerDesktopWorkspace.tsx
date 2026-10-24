@@ -48,6 +48,7 @@ import {
   parseDateKey,
 } from '../utils/dateUtils';
 import { isDayCompleted } from '../utils/progress';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 
 function formatDueLabel(dateKey: string): string {
   return parseDateKey(dateKey).toLocaleDateString('en-US', {
@@ -1052,10 +1053,16 @@ export const TrainerDesktopWorkspace: React.FC<
               { id: 'clients', label: 'Clients', icon: Users },
               { id: 'library', label: 'Library', icon: BookOpen },
               { id: 'programs', label: 'Programs', icon: Calendar },
-              { id: 'payments', label: 'Payments', icon: CreditCard },
-              { id: 'referrals', label: 'Referrals', icon: Share2 },
-              { id: 'teams', label: 'Teams', icon: Building2 },
-              { id: 'marketing', label: 'Marketing', icon: Filter },
+              // Demo-only sections (no real payments/teams/marketing behind them):
+              // shown in the offline demo, hidden for real (cloud) accounts.
+              ...(isSupabaseConfigured
+                ? []
+                : ([
+                    { id: 'payments', label: 'Payments', icon: CreditCard },
+                    { id: 'referrals', label: 'Referrals', icon: Share2 },
+                    { id: 'teams', label: 'Teams', icon: Building2 },
+                    { id: 'marketing', label: 'Marketing', icon: Filter },
+                  ] as const)),
             ] as const
           ).map((item) => {
             const Icon = item.icon;
