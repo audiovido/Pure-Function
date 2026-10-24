@@ -277,17 +277,18 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
     setEditFirstName(defaultFirst);
     setEditLastName(defaultLast);
     setEditEmail(client.email || '');
-    setEditLocation(client.location ?? 'Los Angeles');
+    setEditLocation(client.location ?? '');
     setEditTimezone(client.timezone ?? 'America / Los_Angeles');
-    setEditHeightFt(client.heightFt ?? '5');
-    setEditHeightIn(client.heightIn ?? '4');
+    setEditHeightFt(client.heightFt ?? '');
+    setEditHeightIn(client.heightIn ?? '');
     setEditWeight(client.weightLbs ?? '');
-    setEditCountryCode(client.countryCode ?? '🇨🇦 +1');
-    setEditPhone(client.phone ?? '(702) 808-2102');
-    setEditBirthday(client.birthday ?? '12/15/1985');
+    setEditCountryCode(client.countryCode ?? '🇺🇸 +1');
+    setEditPhone(client.phone ?? '');
+    setEditBirthday(client.birthday ?? '');
     setEditUnitPreference(client.unitPreference ?? 'Imperial / US');
-    setEditGender(client.gender ?? 'F');
-    setEditEmailDaily(client.emailDailyWorkout ?? false);
+    setEditGender(client.gender ?? 'Prefer not to say');
+    // reminders are on unless turned off (matches the reminder email function)
+    setEditEmailDaily(client.emailDailyWorkout ?? true);
     setEditEmailMissed(client.emailMissedWorkouts ?? false);
     setShowAdditionalDetails(true);
     setSubScreen('editClient');
