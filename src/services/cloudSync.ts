@@ -152,3 +152,25 @@ export async function pullAll(): Promise<CloudSnapshot | null> {
     messages: group<DirectMessage>(m.data as any),
   };
 }
+
+/** Remove a client and all of their data (trainer only; enforced by RLS). */
+export async function deleteClientCloud(clientId: string): Promise<boolean> {
+  if (!supabase) return false;
+  for (const table of ['messages', 'nutrition', 'workouts']) {
+    const { error } = await supabase.from(table).delete().eq('client_id', clientId);
+    if (error) {
+      console.error(`[cloudSync] delete from ${table} failed:`, error.message);
+      return false;
+    }
+  }
+  const { error } = await supabase.from('clients').delete().eq('id', clientId);
+  if (error) {
+    console.error('[cloudSync] delete client failed:', error.message);
+    return false;
+  }
+  // forget cached rows so a re-added client is uploaded again
+  for (const key of [...pushed.keys()]) {
+    if (key === `clients:${clientId}` || key.includes(`:${clientId}:`)) pushed.delete(key);
+  }
+  return true;
+}

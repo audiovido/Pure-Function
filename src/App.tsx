@@ -44,6 +44,7 @@ import {
   pushNutrition,
   pushMessages,
   pullAll,
+  deleteClientCloud,
 } from './services/cloudSync';
 import { getCurrentAccount, signOutCloud } from './services/authService';
 import { isSupabaseConfigured } from './services/supabaseClient';
@@ -58,13 +59,20 @@ import { AssessmentsModal } from './components/AssessmentsModal';
 import { LibraryModal } from './components/LibraryModal';
 import { ProgramsModal } from './components/ProgramsModal';
 import { ClientManagerModal } from './components/ClientManagerModal';
+import { EmptyTrainerState } from './components/EmptyTrainerState';
+import { CloudStatusScreen } from './components/CloudStatusScreen';
+
+// In cloud mode there is no demo data: everything starts empty and is filled from Supabase
+const FALLBACK_WORKOUTS: DayWorkout[] = isSupabaseConfigured ? [] : INITIAL_OCTOBER_WORKOUTS;
 
 export default function App() {
   const [theme] = useState<ThemeMode>('light');
 
-  const [clients, setClients] = useState<ClientProfile[]>(() => loadClients());
+  const [clients, setClients] = useState<ClientProfile[]>(() =>
+    isSupabaseConfigured ? [] : loadClients()
+  );
   const [accounts, setAccounts] = useState<AuthAccount[]>(() =>
-    loadAccounts(loadClients())
+    isSupabaseConfigured ? [] : loadAccounts(loadClients())
   );
 
   // Always start on the Trainer Sign In / Client Sign In screen on page load or reload
@@ -73,6 +81,7 @@ export default function App() {
   // Initial 1.5s Splash Screen state (large centered logo -> fast fade-out)
   // true once cloud data has been pulled after login; gates uploads so stale local data never overwrites the cloud
   const [cloudReady, setCloudReady] = useState<boolean>(false);
+  const [syncError, setSyncError] = useState<boolean>(false);
   const [showSplash, setShowSplash] = useState<boolean>(true);
   const [isSplashFading, setIsSplashFading] = useState<boolean>(false);
 
@@ -85,21 +94,22 @@ export default function App() {
   const [clientBottomTab, setClientBottomTab] =
     useState<ClientBottomTab>('today');
 
-  const [selectedClientId, setSelectedClientId] =
-    useState<string>('alex-morgan');
+  const [selectedClientId, setSelectedClientId] = useState<string>(
+    isSupabaseConfigured ? '' : 'alex-morgan'
+  );
 
   // Persistent maps per client
   const [clientWorkoutsMap, setClientWorkoutsMap] = useState<
     Record<string, DayWorkout[]>
-  >(() => loadWorkoutsMap(loadClients()));
+  >(() => (isSupabaseConfigured ? {} : loadWorkoutsMap(loadClients())));
 
   const [nutritionMap, setNutritionMap] = useState<
     Record<string, Record<string, DailyNutritionEntry>>
-  >(() => loadNutritionMap(loadClients()));
+  >(() => (isSupabaseConfigured ? {} : loadNutritionMap(loadClients())));
 
   const [messagesMap, setMessagesMap] = useState<
     Record<string, DirectMessage[]>
-  >(() => loadMessagesMap(loadClients()));
+  >(() => (isSupabaseConfigured ? {} : loadMessagesMap(loadClients())));
 
   const [selectedDate, setSelectedDate] = useState<string>(() =>
     getTodayDateString()
@@ -158,32 +168,32 @@ export default function App() {
 
   // Sync persistent stores to localStorage
   useEffect(() => {
-    saveClients(clients);
+    if (!isSupabaseConfigured) saveClients(clients);
     if (!isSupabaseConfigured || !cloudReady) return;
     const t = setTimeout(() => { pushClients(clients); }, 1500); // debounced cloud sync
     return () => clearTimeout(t);
   }, [clients, cloudReady]);
 
   useEffect(() => {
-    saveAccounts(accounts);
+    if (!isSupabaseConfigured) saveAccounts(accounts);
   }, [accounts]);
 
   useEffect(() => {
-    saveWorkoutsMap(clientWorkoutsMap);
+    if (!isSupabaseConfigured) saveWorkoutsMap(clientWorkoutsMap);
     if (!isSupabaseConfigured || !cloudReady) return;
     const t = setTimeout(() => { pushWorkouts(clientWorkoutsMap); }, 1500); // debounced cloud sync
     return () => clearTimeout(t);
   }, [clientWorkoutsMap, cloudReady]);
 
   useEffect(() => {
-    saveNutritionMap(nutritionMap);
+    if (!isSupabaseConfigured) saveNutritionMap(nutritionMap);
     if (!isSupabaseConfigured || !cloudReady) return;
     const t = setTimeout(() => { pushNutrition(nutritionMap); }, 1500); // debounced cloud sync
     return () => clearTimeout(t);
   }, [nutritionMap, cloudReady]);
 
   useEffect(() => {
-    saveMessagesMap(messagesMap);
+    if (!isSupabaseConfigured) saveMessagesMap(messagesMap);
     if (!isSupabaseConfigured || !cloudReady) return;
     const t = setTimeout(() => { pushMessages(messagesMap); }, 1500); // debounced cloud sync
     return () => clearTimeout(t);
@@ -191,23 +201,30 @@ export default function App() {
 
   // Pull the latest data from Supabase (RLS limits clients to their own rows)
   const hydrateFromCloud = async () => {
+    setSyncError(false);
     const snap = await pullAll();
-    if (snap && snap.clients.length > 0) {
-      const ids = snap.clients.map((c) => c.id);
-      const fill = <T,>(src: Record<string, T>, empty: () => T) =>
-        Object.fromEntries(ids.map((id) => [id, src[id] ?? empty()]));
-      setClients(snap.clients);
-      setClientWorkoutsMap(fill(snap.workouts, () => []));
-      setNutritionMap(fill(snap.nutrition, () => ({})));
-      setMessagesMap(fill(snap.messages, () => []));
+    if (!snap) {
+      // failed: stay not-ready so nothing is uploaded over cloud data
+      setSyncError(true);
+      return;
     }
+    const ids = snap.clients.map((c) => c.id);
+    const fill = <T,>(src: Record<string, T>, empty: () => T) =>
+      Object.fromEntries(ids.map((id) => [id, src[id] ?? empty()]));
+    setClients(snap.clients);
+    setClientWorkoutsMap(fill(snap.workouts, () => []));
+    setNutritionMap(fill(snap.nutrition, () => ({})));
+    setMessagesMap(fill(snap.messages, () => []));
+    setSelectedClientId((cur) =>
+      ids.includes(cur) ? cur : ids[0] ?? ''
+    );
     setCloudReady(true);
   };
 
   // Sign In Handler
   const handleAuthenticated = (account: AuthAccount) => {
     setActiveAccount(account);
-    saveActiveSession(account);
+    if (!isSupabaseConfigured) saveActiveSession(account);
     if (isSupabaseConfigured) void hydrateFromCloud();
 
     if (account.role === 'client') {
@@ -245,6 +262,7 @@ export default function App() {
     setActiveAccount(null);
     saveActiveSession(null);
     setCloudReady(false);
+    setSyncError(false);
     void signOutCloud();
   };
 
@@ -266,13 +284,13 @@ export default function App() {
     clients.find((c) => c.id === effectiveClientId) || clients[0];
 
   const workouts =
-    clientWorkoutsMap[effectiveClientId] || INITIAL_OCTOBER_WORKOUTS;
+    clientWorkoutsMap[effectiveClientId] || FALLBACK_WORKOUTS;
 
   const setWorkouts = (
     updater: DayWorkout[] | ((prev: DayWorkout[]) => DayWorkout[])
   ) => {
     setClientWorkoutsMap((prev) => {
-      const current = prev[effectiveClientId] || INITIAL_OCTOBER_WORKOUTS;
+      const current = prev[effectiveClientId] || FALLBACK_WORKOUTS;
       const next = typeof updater === 'function' ? updater(current) : updater;
       return {
         ...prev,
@@ -290,11 +308,11 @@ export default function App() {
     setClients((prev) => [newClient, ...prev]);
     setClientWorkoutsMap((prev) => ({
       ...prev,
-      [newClient.id]: getClientInitialWorkouts(newClient.id),
+      [newClient.id]: isSupabaseConfigured ? [] : getClientInitialWorkouts(newClient.id),
     }));
     setSelectedClientId(newClient.id);
 
-    if (newClient.username) {
+    if (newClient.username && !isSupabaseConfigured) {
       const normalizedUsername = newClient.username.toLowerCase();
       setAccounts((prev) => {
         if (
@@ -329,6 +347,7 @@ export default function App() {
 
   // Handler: Delete client from roster
   const handleDeleteClient = (clientId: string) => {
+    if (isSupabaseConfigured) void deleteClientCloud(clientId);
     setClients((prev) => {
       const remaining = prev.filter((c) => c.id !== clientId);
       if (selectedClientId === clientId && remaining.length > 0) {
@@ -632,6 +651,42 @@ export default function App() {
   const isDark = theme === 'dark';
   const isTrainerAccount = activeAccount.role === 'trainer';
 
+  // Cloud mode: wait for the first data load before showing any screen
+  if (isSupabaseConfigured && !cloudReady) {
+    return (
+      <CloudStatusScreen
+        error={syncError}
+        onRetry={() => void hydrateFromCloud()}
+        onSignOut={handleSignOut}
+      />
+    );
+  }
+
+  // Fresh account: nothing to show yet except a prompt to add the first client
+  if (isTrainerAccount && !currentClient) {
+    return (
+      <>
+        <EmptyTrainerState
+          trainerName={activeAccount.displayName}
+          onAddClient={() => setIsClientManagerOpen(true)}
+          onSignOut={handleSignOut}
+        />
+        {isClientManagerOpen && (
+          <ClientManagerModal
+            clients={clients}
+            selectedClientId={selectedClientId}
+            onSelectClient={setSelectedClientId}
+            onAddClient={handleAddClient}
+            onDeleteClient={handleDeleteClient}
+            onClose={() => setIsClientManagerOpen(false)}
+            theme={theme}
+            coachName={activeAccount.displayName}
+          />
+        )}
+      </>
+    );
+  }
+
   const sectionTitleMap: Record<TrainerBottomTab, string> = {
     dashboard: 'Dashboard',
     clients: 'Clients',
@@ -865,6 +920,7 @@ export default function App() {
           onDeleteClient={handleDeleteClient}
           onClose={() => setIsClientManagerOpen(false)}
           theme={theme}
+          coachName={activeAccount.displayName}
         />
       )}
     </div>
