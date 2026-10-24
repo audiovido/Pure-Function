@@ -41,7 +41,13 @@ async function upsertChanged(
   if (!supabase) return;
   const { data: sess } = await supabase.auth.getSession();
   if (!sess.session) return; // not signed in: RLS would reject the write anyway
-  const changed = rows.filter((r) => pushed.get(`${table}:${r.key}`) !== r.json);
+  const changed = rows.filter(
+    (r) =>
+      // skip rows without a real client (e.g. the placeholder shown before the first client exists)
+      (r.row as { client_id?: string; id?: string }).client_id !== '' &&
+      (r.row as { id?: string }).id !== '' &&
+      pushed.get(`${table}:${r.key}`) !== r.json
+  );
   if (changed.length === 0) return;
   // chunk to keep requests small
   for (let i = 0; i < changed.length; i += 200) {

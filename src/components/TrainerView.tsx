@@ -34,6 +34,7 @@ import {
   MacroTargets,
   ThemeMode,
 } from '../types';
+import { EMPTY_CLIENT } from '../data/emptyClient';
 import {
   getOrCreateDayWorkout,
   getTodayDateString,
@@ -256,7 +257,7 @@ export const TrainerView: React.FC<TrainerViewProps> = ({
   const [editEmailMissed, setEditEmailMissed] = useState(false);
 
   const selectedClient =
-    clients.find((c) => c.id === selectedClientId) || clients[0];
+    clients.find((c) => c.id === selectedClientId) || clients[0] || EMPTY_CLIENT;
 
   const activeDayWorkout = getOrCreateDayWorkout(workouts, selectedDate);
 

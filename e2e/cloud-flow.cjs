@@ -7,7 +7,7 @@ const srv=http.createServer((q,r)=>{ let f=path.join(root,q.url.split('?')[0]); 
 const ok=(c,m)=>console.log((c?'PASS ':'FAIL ')+m);
 (async()=>{
  const mock=createMock(); const b=await chromium.launch();
- const mk=async()=>{ const ctx=await b.newContext({viewport:{width:390,height:800}}); await ctx.route('https://mock.supabase.co/**',mock.handler); await ctx.routeWebSocket('wss://mock.supabase.co/**',mock.wsHandler); const p=await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{ if(m.type()==='error'&&!/fonts|net::ERR|Failed to load resource/.test(m.text())) errs.push('console: '+m.text()); }); return {ctx,p,errs}; };
+ const mk=async(vp={width:390,height:800})=>{ const ctx=await b.newContext({viewport:vp}); await ctx.route('https://mock.supabase.co/**',mock.handler); await ctx.routeWebSocket('wss://mock.supabase.co/**',mock.wsHandler); const p=await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{ if(m.type()==='error'&&!/fonts|net::ERR|Failed to load resource/.test(m.text())) errs.push('console: '+m.text()); }); return {ctx,p,errs}; };
 
  // ---- A stranger signs up before the coach: must NOT become trainer
  const E=await mk();
@@ -19,7 +19,7 @@ const ok=(c,m)=>console.log((c?'PASS ':'FAIL ')+m);
  ok(await E.p.getByText(/isn't linked to a coach/).count()===1 && !mock.db.profiles.length,'early stranger does not become trainer');
 
  // ---- Trainer signs up
- const T=await mk(); const p=T.p;
+ const T=await mk({width:1440,height:900}); const p=T.p;
  await p.goto('http://localhost:4190/'); await p.waitForTimeout(2200);
  ok(await p.locator('input[aria-label="Email"]').count()===1,'cloud login form shown');
  await p.getByText('First time? Create your account').click();
@@ -28,13 +28,13 @@ const ok=(c,m)=>console.log((c?'PASS ':'FAIL ')+m);
  await p.locator('input[aria-label="Password"]').fill('supersecret1');
  await p.getByRole('button',{name:'Create Account'}).click();
  await p.waitForTimeout(2500);
- ok(await p.getByText('You have no clients yet').count()===1,'new trainer sees empty state');
+ ok(await p.locator('text=Add client >> visible=true').count()>0,'new trainer sees full workspace with empty roster');
  ok(mock.db.profiles.length===1 && mock.db.profiles[0].role==='trainer','configured coach email became trainer');
  await p.waitForTimeout(2500);
  ok(mock.db.clients.length===0 && mock.db.workouts.length===0,'NO demo data uploaded to cloud');
 
  // ---- Add first client
- await p.getByRole('button',{name:/Add your first client/}).click();
+ await p.locator('text=Add client >> visible=true').first().click();
  await p.waitForTimeout(500);
  const addToggle=p.getByRole('button',{name:/^Add Client$/}); if(await addToggle.count()) await addToggle.click();
  await p.getByPlaceholder('e.g. Ryan Sterling').fill('Ryan Sterling');

@@ -61,8 +61,8 @@ import { AssessmentsModal } from './components/AssessmentsModal';
 import { LibraryModal } from './components/LibraryModal';
 import { ProgramsModal } from './components/ProgramsModal';
 import { ClientManagerModal } from './components/ClientManagerModal';
-import { EmptyTrainerState } from './components/EmptyTrainerState';
 import { CloudStatusScreen } from './components/CloudStatusScreen';
+import { EMPTY_CLIENT } from './data/emptyClient';
 
 // In cloud mode there is no demo data: everything starts empty and is filled from Supabase
 const FALLBACK_WORKOUTS: DayWorkout[] = isSupabaseConfigured ? [] : INITIAL_OCTOBER_WORKOUTS;
@@ -307,7 +307,7 @@ export default function App() {
       : selectedClientId;
 
   const currentClient =
-    clients.find((c) => c.id === effectiveClientId) || clients[0];
+    clients.find((c) => c.id === effectiveClientId) || clients[0] || EMPTY_CLIENT;
 
   const workouts =
     clientWorkoutsMap[effectiveClientId] || FALLBACK_WORKOUTS;
@@ -315,6 +315,7 @@ export default function App() {
   const setWorkouts = (
     updater: DayWorkout[] | ((prev: DayWorkout[]) => DayWorkout[])
   ) => {
+    if (!effectiveClientId && isSupabaseConfigured) return; // no client selected yet
     setClientWorkoutsMap((prev) => {
       const current = prev[effectiveClientId] || FALLBACK_WORKOUTS;
       const next = typeof updater === 'function' ? updater(current) : updater;
@@ -688,30 +689,6 @@ export default function App() {
     );
   }
 
-  // Fresh account: nothing to show yet except a prompt to add the first client
-  if (isTrainerAccount && !currentClient) {
-    return (
-      <>
-        <EmptyTrainerState
-          trainerName={activeAccount.displayName}
-          onAddClient={() => setIsClientManagerOpen(true)}
-          onSignOut={handleSignOut}
-        />
-        {isClientManagerOpen && (
-          <ClientManagerModal
-            clients={clients}
-            selectedClientId={selectedClientId}
-            onSelectClient={setSelectedClientId}
-            onAddClient={handleAddClient}
-            onDeleteClient={handleDeleteClient}
-            onClose={() => setIsClientManagerOpen(false)}
-            theme={theme}
-            coachName={activeAccount.displayName}
-          />
-        )}
-      </>
-    );
-  }
 
   const sectionTitleMap: Record<TrainerBottomTab, string> = {
     dashboard: 'Dashboard',
