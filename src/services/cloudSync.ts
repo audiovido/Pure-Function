@@ -21,6 +21,8 @@ async function upsertChanged(
   onConflict: string
 ) {
   if (!supabase) return;
+  const { data: sess } = await supabase.auth.getSession();
+  if (!sess.session) return; // not signed in: RLS would reject the write anyway
   const changed = rows.filter((r) => pushed.get(`${table}:${r.key}`) !== r.json);
   if (changed.length === 0) return;
   // chunk to keep requests small
@@ -134,6 +136,15 @@ export async function pullAll(): Promise<CloudSnapshot | null> {
   const clients = (c.data ?? []).map((r: any) => r.data as ClientProfile);
   // seed push-cache so we don't immediately re-upload what we just downloaded
   clients.forEach((x) => pushed.set(`clients:${x.id}`, JSON.stringify(x)));
+  (w.data ?? []).forEach((r: any) =>
+    pushed.set(`workouts:${r.client_id}:${r.data.date}`, JSON.stringify(r.data))
+  );
+  (n.data ?? []).forEach((r: any) =>
+    pushed.set(`nutrition:${r.client_id}:${r.data.date}`, JSON.stringify(r.data))
+  );
+  (m.data ?? []).forEach((r: any) =>
+    pushed.set(`messages:${r.data.id}`, JSON.stringify(r.data))
+  );
   return {
     clients,
     workouts,

@@ -43,7 +43,9 @@ import {
   pushWorkouts,
   pushNutrition,
   pushMessages,
+  pullAll,
 } from './services/cloudSync';
+import { getCurrentAccount, signOutCloud } from './services/authService';
 import { isSupabaseConfigured } from './services/supabaseClient';
 import { PureFunctionLogo } from './components/PureFunctionLogo';
 import { AuthScreen } from './components/AuthScreen';
@@ -68,6 +70,8 @@ export default function App() {
   const [activeAccount, setActiveAccount] = useState<AuthAccount | null>(null);
 
   // Initial 1.5s Splash Screen state (large centered logo -> fast fade-out)
+  // true once cloud data has been pulled after login; gates uploads so stale local data never overwrites the cloud
+  const [cloudReady, setCloudReady] = useState<boolean>(false);
   const [showSplash, setShowSplash] = useState<boolean>(true);
   const [isSplashFading, setIsSplashFading] = useState<boolean>(false);
 
@@ -133,10 +137,10 @@ export default function App() {
   // Sync persistent stores to localStorage
   useEffect(() => {
     saveClients(clients);
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || !cloudReady) return;
     const t = setTimeout(() => { pushClients(clients); }, 1500); // debounced cloud sync
     return () => clearTimeout(t);
-  }, [clients]);
+  }, [clients, cloudReady]);
 
   useEffect(() => {
     saveAccounts(accounts);
@@ -144,29 +148,45 @@ export default function App() {
 
   useEffect(() => {
     saveWorkoutsMap(clientWorkoutsMap);
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || !cloudReady) return;
     const t = setTimeout(() => { pushWorkouts(clientWorkoutsMap); }, 1500); // debounced cloud sync
     return () => clearTimeout(t);
-  }, [clientWorkoutsMap]);
+  }, [clientWorkoutsMap, cloudReady]);
 
   useEffect(() => {
     saveNutritionMap(nutritionMap);
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || !cloudReady) return;
     const t = setTimeout(() => { pushNutrition(nutritionMap); }, 1500); // debounced cloud sync
     return () => clearTimeout(t);
-  }, [nutritionMap]);
+  }, [nutritionMap, cloudReady]);
 
   useEffect(() => {
     saveMessagesMap(messagesMap);
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || !cloudReady) return;
     const t = setTimeout(() => { pushMessages(messagesMap); }, 1500); // debounced cloud sync
     return () => clearTimeout(t);
-  }, [messagesMap]);
+  }, [messagesMap, cloudReady]);
+
+  // Pull the latest data from Supabase (RLS limits clients to their own rows)
+  const hydrateFromCloud = async () => {
+    const snap = await pullAll();
+    if (snap && snap.clients.length > 0) {
+      const ids = snap.clients.map((c) => c.id);
+      const fill = <T,>(src: Record<string, T>, empty: () => T) =>
+        Object.fromEntries(ids.map((id) => [id, src[id] ?? empty()]));
+      setClients(snap.clients);
+      setClientWorkoutsMap(fill(snap.workouts, () => []));
+      setNutritionMap(fill(snap.nutrition, () => ({})));
+      setMessagesMap(fill(snap.messages, () => []));
+    }
+    setCloudReady(true);
+  };
 
   // Sign In Handler
   const handleAuthenticated = (account: AuthAccount) => {
     setActiveAccount(account);
     saveActiveSession(account);
+    if (isSupabaseConfigured) void hydrateFromCloud();
 
     if (account.role === 'client') {
       setViewMode('client');
@@ -202,7 +222,18 @@ export default function App() {
   const handleSignOut = () => {
     setActiveAccount(null);
     saveActiveSession(null);
+    setCloudReady(false);
+    void signOutCloud();
   };
+
+  // Cloud mode: restore an existing Supabase session on page load
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    getCurrentAccount().then((acc) => {
+      if (acc) handleAuthenticated(acc);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const effectiveClientId =
     activeAccount?.role === 'client' && activeAccount.clientId

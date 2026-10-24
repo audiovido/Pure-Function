@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { AuthAccount, ClientProfile, ThemeMode } from '../types';
 import { PureFunctionLogo } from './PureFunctionLogo';
+import { isSupabaseConfigured } from '../services/supabaseClient';
+import { signIn, signUp } from '../services/authService';
 
 interface AuthScreenProps {
   accounts: AuthAccount[];
@@ -285,6 +287,38 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
+  // Cloud (Supabase) mode state
+  const [cloudMode, setCloudMode] = useState<'signin' | 'signup'>('signin');
+  const [displayName, setDisplayName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
+
+  const handleCloudSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setInfoMsg('');
+    if (cloudMode === 'signup' && password.length < 8) {
+      setErrorMsg('Password must be at least 8 characters.');
+      return;
+    }
+    setBusy(true);
+    const result =
+      cloudMode === 'signin'
+        ? await signIn(username, password)
+        : await signUp(username, password, displayName);
+    setBusy(false);
+
+    if (result.error) {
+      setErrorMsg(result.error);
+    } else if (result.needsConfirmation) {
+      setInfoMsg('Check your email and click the confirmation link, then sign in.');
+      setCloudMode('signin');
+    } else if (result.account) {
+      onAuthenticated(result.account);
+    }
+  };
+
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
     const role = selectedRole;
@@ -387,6 +421,89 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           </div>
 
           {/* Flush-Aligned Username & Password Form (Clean Liquid Silver-Gray Card without extra inner lines/halos) */}
+          {isSupabaseConfigured ? (
+          <form
+            onSubmit={handleCloudSubmit}
+            className="w-full p-5 rounded-2xl border border-slate-300/80 bg-gradient-to-b from-[#f3f5f8] via-[#e4e8f0] to-[#d5dbe6] shadow-[0_10px_24px_-8px_rgba(71,85,105,0.18),inset_0_1.5px_2px_rgba(255,255,255,0.9)] space-y-4 transition-all"
+          >
+            {cloudMode === 'signup' && (
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase tracking-widest mb-1.5 text-slate-600">
+                  Your name
+                </label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  aria-label="Your name"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300/80 bg-white text-neutral-900 text-xs sm:text-sm outline-none transition-all focus:border-amber-400"
+                />
+              </div>
+            )}
+            <div>
+              <label className="block text-[10px] font-extrabold uppercase tracking-widest mb-1.5 text-slate-600">
+                Email
+              </label>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                aria-label="Email"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300/80 bg-white text-neutral-900 text-xs sm:text-sm outline-none transition-all focus:border-amber-400"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-extrabold uppercase tracking-widest mb-1.5 text-slate-600">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                autoComplete={cloudMode === 'signin' ? 'current-password' : 'new-password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                aria-label="Password"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300/80 bg-white text-neutral-900 text-xs sm:text-sm outline-none transition-all focus:border-amber-400"
+              />
+            </div>
+
+            {errorMsg && (
+              <p role="alert" className="text-[11px] font-semibold text-red-600">
+                {errorMsg}
+              </p>
+            )}
+            {infoMsg && (
+              <p className="text-[11px] font-semibold text-emerald-700">{infoMsg}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={busy}
+              className="w-full py-2.5 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer border bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 text-black border-amber-300 disabled:opacity-60"
+            >
+              <span>
+                {busy ? 'Please wait…' : cloudMode === 'signin' ? 'Sign In' : 'Create Account'}
+              </span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setCloudMode(cloudMode === 'signin' ? 'signup' : 'signin');
+                setErrorMsg('');
+                setInfoMsg('');
+              }}
+              className="w-full text-center text-[11px] font-bold text-slate-600 underline cursor-pointer"
+            >
+              {cloudMode === 'signin'
+                ? 'First time? Create your account'
+                : 'Already have an account? Sign in'}
+            </button>
+          </form>
+          ) : (
           <form
             onSubmit={handleSignIn}
             className="w-full p-5 rounded-2xl border border-slate-300/80 bg-gradient-to-b from-[#f3f5f8] via-[#e4e8f0] to-[#d5dbe6] shadow-[0_10px_24px_-8px_rgba(71,85,105,0.18),inset_0_1.5px_2px_rgba(255,255,255,0.9)] space-y-4 transition-all"
@@ -431,6 +548,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </form>
+          )}
         </div>
       </main>
     </div>
