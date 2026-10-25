@@ -27,7 +27,6 @@ import {
 } from './types';
 import {
   saveActiveSession,
-  loadActiveSession,
   loadAccounts,
   saveAccounts,
   loadClients,
@@ -49,9 +48,9 @@ import {
   subscribeRealtime,
   isSameData,
 } from './services/cloudSync';
-import { getCurrentAccount, signOutCloud } from './services/authService';
-import { isSupabaseConfigured, isLoginFrozen } from './services/supabaseClient';
-import { TestModeEntry } from './components/TestModeEntry';
+import { getCurrentAccount, signIn, signOutCloud } from './services/authService';
+import { isSupabaseConfigured, isQuickLoginOn, testClient } from './services/supabaseClient';
+import { QuickEntry } from './components/QuickEntry';
 import { getCompliance } from './utils/progress';
 import { PureFunctionLogo } from './components/PureFunctionLogo';
 import { AuthScreen } from './components/AuthScreen';
@@ -92,6 +91,8 @@ export default function App() {
   const [isSplashFading, setIsSplashFading] = useState<boolean>(false);
 
   const [viewMode, setViewMode] = useState<AppViewMode>('trainer');
+  // Quick login: true after the person picks "Coach" so the normal login form is shown
+  const [showFullLogin, setShowFullLogin] = useState<boolean>(false);
 
   const [trainerBottomTab, setTrainerBottomTab] =
     useState<TrainerBottomTab>('clients');
@@ -263,9 +264,20 @@ export default function App() {
     handleAuthenticated(newAccount);
   };
 
+  // Quick login: one-tap sign-in as the shared test client (returns an error message, if any)
+  const handleQuickClient = async (): Promise<string | undefined> => {
+    const result = await signIn(testClient.email, testClient.password);
+    if (result.account) {
+      handleAuthenticated(result.account);
+      return undefined;
+    }
+    return result.error ?? 'Could not sign in.';
+  };
+
   // Sign Out Handler
   const handleSignOut = () => {
     setActiveAccount(null);
+    setShowFullLogin(false);
     saveActiveSession(null);
     setCloudReady(false);
     setSyncError(false);
@@ -295,14 +307,6 @@ export default function App() {
         }),
     });
   }, [cloudReady]);
-
-  // Frozen login (test mode): reopen straight into the last role used on this device
-  useEffect(() => {
-    if (!isLoginFrozen) return;
-    const saved = loadActiveSession();
-    if (saved) handleAuthenticated(saved);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Cloud mode: restore an existing Supabase session on page load
   useEffect(() => {
@@ -676,11 +680,10 @@ export default function App() {
             />
           </div>
         )}
-        {isLoginFrozen ? (
-          <TestModeEntry
-            accounts={accounts}
-            clients={clients}
-            onEnter={handleAuthenticated}
+        {isQuickLoginOn && !showFullLogin ? (
+          <QuickEntry
+            onClient={handleQuickClient}
+            onCoach={() => setShowFullLogin(true)}
           />
         ) : (
           <AuthScreen

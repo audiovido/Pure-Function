@@ -3,17 +3,21 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-/**
- * Login freeze (test mode). ON by default: the app skips email/password login and the cloud,
- * and opens straight into a Coach / Client chooser using browser-only (localStorage) data.
- * All the Supabase code stays in place. To bring real login back, build with
- * VITE_FREEZE_LOGIN=false (add that line to .env.production and push).
- */
-export const isLoginFrozen =
-  (import.meta.env.VITE_FREEZE_LOGIN as string | undefined) !== 'false';
+/** True only when both env vars are set. Otherwise the app stays localStorage-only. */
+export const isSupabaseConfigured = Boolean(url && anonKey);
 
-/** True only when both env vars are set and the login freeze is off. Otherwise the app stays localStorage-only. */
-export const isSupabaseConfigured = Boolean(url && anonKey) && !isLoginFrozen;
+/**
+ * Quick login (test phase): a shared TEST client account so a phone can open the app as a client
+ * with one tap, no typing. The coach logs in once per device and stays signed in.
+ * Values come from GitHub Actions Variables (never from git) and end up in the public app, so the
+ * test client must be a throwaway client with no private data. Leave them unset to turn it off.
+ */
+export const testClient = {
+  email: (import.meta.env.VITE_TEST_CLIENT_EMAIL as string | undefined) ?? '',
+  password: (import.meta.env.VITE_TEST_CLIENT_PASSWORD as string | undefined) ?? '',
+};
+export const isQuickLoginOn =
+  isSupabaseConfigured && Boolean(testClient.email && testClient.password);
 
 export const supabase: SupabaseClient | null = isSupabaseConfigured
   ? createClient(url!, anonKey!)

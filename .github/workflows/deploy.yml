@@ -41,6 +41,11 @@ jobs:
       # Supabase URL + publishable key come from .env.production (public values)
       - name: Build
         run: npm run build
+        env:
+          # Quick login (optional): set under GitHub > Settings > Secrets and variables > Actions > Variables.
+          # Public in the built app, so use a throwaway test client. Leave unset to turn quick login off.
+          VITE_TEST_CLIENT_EMAIL: ${{ vars.VITE_TEST_CLIENT_EMAIL }}
+          VITE_TEST_CLIENT_PASSWORD: ${{ vars.VITE_TEST_CLIENT_PASSWORD }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
