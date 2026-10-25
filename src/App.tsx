@@ -27,6 +27,7 @@ import {
 } from './types';
 import {
   saveActiveSession,
+  loadActiveSession,
   loadAccounts,
   saveAccounts,
   loadClients,
@@ -49,7 +50,8 @@ import {
   isSameData,
 } from './services/cloudSync';
 import { getCurrentAccount, signOutCloud } from './services/authService';
-import { isSupabaseConfigured } from './services/supabaseClient';
+import { isSupabaseConfigured, isLoginFrozen } from './services/supabaseClient';
+import { TestModeEntry } from './components/TestModeEntry';
 import { getCompliance } from './utils/progress';
 import { PureFunctionLogo } from './components/PureFunctionLogo';
 import { AuthScreen } from './components/AuthScreen';
@@ -293,6 +295,14 @@ export default function App() {
         }),
     });
   }, [cloudReady]);
+
+  // Frozen login (test mode): reopen straight into the last role used on this device
+  useEffect(() => {
+    if (!isLoginFrozen) return;
+    const saved = loadActiveSession();
+    if (saved) handleAuthenticated(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Cloud mode: restore an existing Supabase session on page load
   useEffect(() => {
@@ -666,13 +676,21 @@ export default function App() {
             />
           </div>
         )}
-        <AuthScreen
-          accounts={accounts}
-          clients={clients}
-          onAuthenticated={handleAuthenticated}
-          onRegisterAccount={handleRegisterAccount}
-          theme={theme}
-        />
+        {isLoginFrozen ? (
+          <TestModeEntry
+            accounts={accounts}
+            clients={clients}
+            onEnter={handleAuthenticated}
+          />
+        ) : (
+          <AuthScreen
+            accounts={accounts}
+            clients={clients}
+            onAuthenticated={handleAuthenticated}
+            onRegisterAccount={handleRegisterAccount}
+            theme={theme}
+          />
+        )}
       </>
     );
   }
