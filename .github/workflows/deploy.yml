@@ -45,8 +45,6 @@ jobs:
           # The anon key is public by design; Row Level Security protects the data.
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
-          # Login is frozen (test mode) unless this Variable is set to the text: false
-          VITE_FREEZE_LOGIN: ${{ vars.VITE_FREEZE_LOGIN }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
