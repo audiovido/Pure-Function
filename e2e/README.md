@@ -6,7 +6,7 @@ flow can be tested without a Supabase project.
 
 ```bash
 npm i --no-save playwright && npx playwright install chromium   # once
-VITE_FREEZE_LOGIN=false VITE_SUPABASE_URL=https://mock.supabase.co VITE_SUPABASE_ANON_KEY=anon \
+VITE_SUPABASE_URL=https://mock.supabase.co VITE_SUPABASE_ANON_KEY=anon \
   npx vite build --outDir /tmp/dist-cloud
 cd e2e && for t in cloud-flow cloud-auth cloud-realtime cloud-empty-coach; do node $t.cjs /tmp/dist-cloud; done
 ```
